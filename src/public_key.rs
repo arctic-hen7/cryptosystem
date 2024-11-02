@@ -17,7 +17,9 @@ use serde::Serialize;
 /// A public key, which can be shared with the world to either encrypt messages to the holder of
 /// the secret key, or to verify signatures which they have created. The capabilities of this key
 /// depend on whether the type parameter `C` implements [`crate::SigningCryptosystem`],
-/// [`crate::AsymmetricCryptosystem`], or both.
+/// [`crate::AsymmetricCryptosystem`], or both. (Public keys are essential for key exchange, but
+/// have no operations performed on them beyond sending them to the other party, so implementing
+/// [`KeyExchangeCryptosystem`] doesn't provide any additional capabilities for this type.)
 pub struct PublicKey<C: PublicKeyCryptosystem> {
     pub(crate) key: C::PublicKey,
 }

@@ -1,5 +1,6 @@
 #[cfg(feature = "base64")]
 use crate::base64_utils::{base64_to_bytes, bytes_to_base64};
+use crate::cryptosystem::KeyExchangeCryptosystem;
 #[cfg(feature = "base64")]
 use crate::error::FromBase64Error;
 #[cfg(feature = "hex")]
@@ -18,7 +19,8 @@ use serde::{Deserialize, Serialize};
 /// others for them with their public key, or to create signatures on messages that will be
 /// verifiable by others with their public key. The capabilities of this key depend on whether the
 /// type parameter `C` implements [`crate::SigningCryptosystem`],
-/// [`crate::AsymmetricCryptosystem`], or both.
+/// [`crate::AsymmetricCryptosystem`], [`crate::KeyExchangeCryptosystem`], or some combination of
+/// the three.
 pub struct SecretKey<C: PublicKeyCryptosystem> {
     key: C::SecretKey,
 }
@@ -133,6 +135,17 @@ impl<C: SigningCryptosystem> SecretKey<C> {
             .map_err(|source| CryptoError::SerializationFailed { source })?;
         self.sign_bytes(&msg_bytes)
             .map_err(|source| CryptoError::ImplementationError { source })
+    }
+}
+
+impl<C: KeyExchangeCryptosystem> SecretKey<C> {
+    /// Generates a shared secret for communication with some other party, given their public key.
+    /// This could then be used to seed a symmetric encryption key, for example.
+    pub fn generate_shared_secret(
+        &self,
+        public_key: &PublicKey<C>,
+    ) -> Result<C::SharedSecret, C::Error> {
+        C::generate_shared_secret(&self.key, &public_key.key)
     }
 }
 

@@ -59,6 +59,29 @@ pub trait AsymmetricCryptosystem: PublicKeyCryptosystem {
     fn decrypt(ciphertext: &[u8], key: &Self::SecretKey) -> Result<Vec<u8>, Self::Error>;
 }
 
+/// A trait for a collection of key exchange primitives that allow, from a public and secret key,
+/// the derivation of a shared secret, which can be used for communication. This is used in this
+/// library instead of a trait for direct asymmetric encryption, as key exchange, followed by
+/// symmetric encryption, tends to be more flexible and more secure (especially when used with
+/// ephemeral keys).
+pub trait KeyExchangeCryptosystem: PublicKeyCryptosystem {
+    /// The type of shared secrets produced by this cryptosystem.
+    type SharedSecret;
+    /// The type of errors that can occur when generating shared secrets.
+    type Error: std::error::Error;
+
+    /// Generates a shared secret for communication with some other party, given their public key
+    /// and our secret key.
+    fn generate_shared_secret(
+        secret_key: &Self::SecretKey,
+        public_key: &Self::PublicKey,
+    ) -> Result<Self::SharedSecret, Self::Error>;
+
+    /// Exports the given shared secret to raw bytes, without any additional formatting. It is
+    /// assumed that this will never need to be imported again.
+    fn export_shared_secret(shared_secret: &Self::SharedSecret) -> &[u8];
+}
+
 /// A trait for a collection of asymmetric cryptographic primitives. This trait by itself does not
 /// provide any useful things for these primitives to do, it only looks at the public and secret
 /// keys involved, providing the capacity to generate, import, and export them.

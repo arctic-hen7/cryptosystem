@@ -98,115 +98,33 @@ macro_rules! signing_cryptosystem_tests {
     };
 }
 
-/// Automatically writes tests for cryptosystems based on a default set of parameters. These cover
-/// very broad things like random byte alterations within keys, and general interface properties,
-/// so individual implementations should add additional tests if they have further edge cases.
-macro_rules! cryptosys_tests {
+/// Auto-generates tests for the provided key exchange cryptosystem, which should be specified by
+/// its import path as if it were being used in a submodule (typically `super::CryptosystemName`).
+/// These tests cover basic things actual exchange, and do **not** test security properties! They
+/// represent an absolute minimum to test that the given cryptosystem is actually usable, and
+/// should be extended by the implementor.
+#[macro_export]
+macro_rules! key_exchange_cryptosystem_tests {
     ($cs:ty) => {
         #[cfg(test)]
-        mod __cryptosys_tests {
-            use super::*;
-            use crate::Cryptosystem;
-
-            struct Test {
-                foo: String,
-            }
-            // TODO Bytes impls
+        mod __key_exchange_cryptosystem_tests {
+            use crate::cryptosystem::{KeyExchangeCryptosystem, PublicKeyCryptosystem};
 
             #[test]
-            fn generate_asymmetric_keypair_succeeds(
-            ) -> Result<(), CryptoError<<$cs as Cryptosystem>::Error>> {
-                let (pub_key, _sec_key) = <$cs>::generate_asymmetric_keypair()?;
-                // Make sure it works by encrypting something
-                <$cs>::a_encrypt(&"Hello, world!".to_string(), &pub_key)?;
-
-                Ok(())
-            }
-
-            #[cfg(feature = "master-key")]
-            #[test]
-            fn encrypt_and_decrypt_asymmetric_succeeds(
-            ) -> Result<(), CryptoError<<$cs as Cryptosystem>::Error>> {
-                let (pub_key, sec_key) = <$cs>::generate_asymmetric_keypair()?;
-
-                let plaintext = "Hello, world!".to_string();
-                let ciphertext = <$cs>::a_encrypt(&plaintext, &pub_key)?;
-                let decrypted = <$cs>::a_decrypt(&ciphertext, &sec_key)?;
-                assert_eq!(plaintext, decrypted);
-
-                Ok(())
-            }
-            #[cfg(feature = "master-key")]
-            #[test]
-            fn encrypt_and_decrypt_asymmetric_succeeds_for_object(
-            ) -> Result<(), CryptoError<<$cs as Cryptosystem>::Error>> {
-                #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
-                struct Test {
-                    foo: String,
-                }
-
-                let obj = Test {
-                    foo: "Bar!".to_string(),
-                };
-                let (pub_key, sec_key) = <$cs>::generate_asymmetric_keypair()?;
-
-                let ciphertext = <$cs>::a_encrypt(&obj, &pub_key)?;
-                let decrypted = <$cs>::a_decrypt(&ciphertext, &sec_key)?;
-                assert_eq!(obj, decrypted);
-
-                Ok(())
-            }
-            #[cfg(feature = "master-key")]
-            #[test]
-            fn encrypt_and_decrypt_asymmetric_fails_with_modified_ciphertext(
-            ) -> Result<(), CryptoError<<$cs as Cryptosystem>::Error>> {
-                let (pub_key, sec_key) = <$cs>::generate_asymmetric_keypair()?;
-
-                let plaintext = "Hello, world!".to_string();
-                let mut ciphertext = <$cs>::a_encrypt(&plaintext, &pub_key)?;
-                ciphertext.data[32] ^= 1;
-                let decrypted = <$cs>::a_decrypt(&ciphertext, &sec_key);
-                assert!(decrypted.is_err());
-
-                Ok(())
-            }
-            #[cfg(feature = "master-key")]
-            #[test]
-            fn encrypt_and_decrypt_asymmetric_fails_with_bad_key(
-            ) -> Result<(), CryptoError<<$cs as Cryptosystem>::Error>> {
-                let (pub_key, _) = <$cs>::generate_asymmetric_keypair()?;
-                let (_, bad_sec_key) = <$cs>::generate_asymmetric_keypair()?;
-
-                let plaintext = "Hello, world!".to_string();
-                let ciphertext = <$cs>::a_encrypt(&plaintext, &pub_key)?;
-                let decrypted = <$cs>::a_decrypt(&ciphertext, &bad_sec_key);
-                assert!(decrypted.is_err());
-
-                Ok(())
-            }
-
-            #[test]
-            fn hash_succeeds() -> Result<(), CryptoError<<$cs as Cryptosystem>::Error>> {
-                let plaintext = "Hello, world!".to_string();
-                let hash = <$cs>::hash(&plaintext);
-                assert!(hash.is_ok());
-
-                Ok(())
+            fn generate_keypair_succeeds() {
+                let (_pub_key, _sec_key) = <$cs>::generate_keypair();
             }
             #[test]
-            fn hash_succeeds_for_object() -> Result<(), CryptoError<<$cs as Cryptosystem>::Error>> {
-                #[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
-                struct Test {
-                    foo: String,
-                }
+            fn derive_shared_secret_succeeds() {
+                let (alice_pub_key, alice_sec_key) = <$cs>::generate_keypair();
+                let (bob_pub_key, bob_sec_key) = <$cs>::generate_keypair();
 
-                let obj = Test {
-                    foo: "Bar!".to_string(),
-                };
-                let hash = <$cs>::hash(&obj);
-                assert!(hash.is_ok());
+                let alice_shared =
+                    <$cs>::generate_shared_secret(&bob_sec_key, &alice_pub_key).unwrap();
+                let bob_shared =
+                    <$cs>::generate_shared_secret(&alice_sec_key, &bob_pub_key).unwrap();
 
-                Ok(())
+                assert_eq!(alice_shared.as_bytes(), bob_shared.as_bytes());
             }
         }
     };
