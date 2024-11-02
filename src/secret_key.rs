@@ -70,8 +70,8 @@ impl<C: PublicKeyCryptosystem> SecretKey<C> {
         let base64 = pem.trim();
 
         let bytes =
-            base64_to_bytes(&base64, false).map_err(|source| FromPemError::DecodeError(source))?;
-        Self::from_raw_bytes(&bytes).map_err(|source| FromPemError::ConvertError(source))
+            base64_to_bytes(base64, false).map_err(FromPemError::DecodeError)?;
+        Self::from_raw_bytes(&bytes).map_err(FromPemError::ConvertError)
     }
     /// Exports this secret key to a PEM-encoded string.
     #[cfg(feature = "pem")]
@@ -88,8 +88,8 @@ impl<C: PublicKeyCryptosystem> SecretKey<C> {
     /// key bytes, which is not the same as the hex encoding of the DER bytes!
     #[cfg(feature = "hex")]
     pub fn from_hex(hex: &str) -> Result<Self, FromHexError<C::IoError>> {
-        let bytes = hex::decode(hex).map_err(|source| FromHexError::DecodeError(source))?;
-        Self::from_raw_bytes(&bytes).map_err(|source| FromHexError::ConvertError(source))
+        let bytes = hex::decode(hex).map_err(FromHexError::DecodeError)?;
+        Self::from_raw_bytes(&bytes).map_err(FromHexError::ConvertError)
     }
     /// Exports this secret key to a hex-encoded string. This is a hex encoding of the raw secret
     /// key bytes, and will not be readable by most other programs (consider [`Self::to_pem`]
@@ -105,8 +105,8 @@ impl<C: PublicKeyCryptosystem> SecretKey<C> {
     #[cfg(feature = "base64")]
     pub fn from_base64(base64: &str, url_safe: bool) -> Result<Self, FromBase64Error<C::IoError>> {
         let bytes = base64_to_bytes(base64, url_safe)
-            .map_err(|source| FromBase64Error::DecodeError(source))?;
-        Self::from_raw_bytes(&bytes).map_err(|source| FromBase64Error::ConvertError(source))
+            .map_err(FromBase64Error::DecodeError)?;
+        Self::from_raw_bytes(&bytes).map_err(FromBase64Error::ConvertError)
     }
     /// Exports this secret key to a base64-encoded string. This is a base64 encoding of the raw
     /// secret key bytes, and will not be readable by most other programs (consider

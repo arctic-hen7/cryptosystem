@@ -15,7 +15,7 @@ impl PublicKeyCryptosystem for X25519Cryptosystem {
     type IoError = X25519IoError;
 
     fn generate_keypair() -> (Self::PublicKey, Self::SecretKey) {
-        let secret_key = StaticSecret::random_from_rng(&mut OsRng);
+        let secret_key = StaticSecret::random_from_rng(OsRng);
         let public_key = PublicKey::from(&secret_key);
 
         (public_key, secret_key)

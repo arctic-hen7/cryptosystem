@@ -8,7 +8,7 @@ macro_rules! symmetric_cryptosystem_tests {
     ($cs:ty) => {
         #[cfg(test)]
         mod __symmetric_cryptosystem_tests {
-            use crate::cryptosystem::SymmetricCryptosystem;
+            use $crate::cryptosystem::SymmetricCryptosystem;
 
             #[test]
             fn generate_symmetric_key_succeeds() {
@@ -57,7 +57,7 @@ macro_rules! signing_cryptosystem_tests {
     ($cs:ty) => {
         #[cfg(test)]
         mod __signing_cryptosystem_tests {
-            use crate::cryptosystem::{PublicKeyCryptosystem, SigningCryptosystem};
+            use $crate::cryptosystem::{PublicKeyCryptosystem, SigningCryptosystem};
 
             #[test]
             fn generate_signing_keypair_succeeds() {
@@ -108,7 +108,7 @@ macro_rules! key_exchange_cryptosystem_tests {
     ($cs:ty) => {
         #[cfg(test)]
         mod __key_exchange_cryptosystem_tests {
-            use crate::cryptosystem::{KeyExchangeCryptosystem, PublicKeyCryptosystem};
+            use $crate::cryptosystem::{KeyExchangeCryptosystem, PublicKeyCryptosystem};
 
             #[test]
             fn generate_keypair_succeeds() {

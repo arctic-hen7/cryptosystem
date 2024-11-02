@@ -25,8 +25,8 @@ impl<C: SigningCryptosystem> Signature<C> {
     /// Imports the given hex-encoded string as a signature.
     #[cfg(feature = "hex")]
     pub fn from_hex(hex: &str) -> Result<Self, FromHexError<<C as SigningCryptosystem>::IoError>> {
-        let bytes = hex::decode(hex).map_err(|source| FromHexError::DecodeError(source))?;
-        Self::from_bytes(&bytes).map_err(|source| FromHexError::ConvertError(source))
+        let bytes = hex::decode(hex).map_err(FromHexError::DecodeError)?;
+        Self::from_bytes(&bytes).map_err(FromHexError::ConvertError)
     }
     /// Exports this signature to a hex-encoded string.
     #[cfg(feature = "hex")]
@@ -42,8 +42,8 @@ impl<C: SigningCryptosystem> Signature<C> {
         url_safe: bool,
     ) -> Result<Self, FromBase64Error<<C as SigningCryptosystem>::IoError>> {
         let bytes = base64_to_bytes(base64, url_safe)
-            .map_err(|source| FromBase64Error::DecodeError(source))?;
-        Self::from_bytes(&bytes).map_err(|source| FromBase64Error::ConvertError(source))
+            .map_err(FromBase64Error::DecodeError)?;
+        Self::from_bytes(&bytes).map_err(FromBase64Error::ConvertError)
     }
     /// Exports this signature to a base64-encoded string.
     #[cfg(feature = "base64")]

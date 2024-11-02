@@ -34,8 +34,8 @@ impl<C: SymmetricCryptosystem> SymmetricKey<C> {
     /// Imports the given hex-encoded string as a symmetric key.
     #[cfg(feature = "hex")]
     pub fn from_hex(hex: &str) -> Result<Self, FromHexError<C::IoError>> {
-        let bytes = hex::decode(hex).map_err(|source| FromHexError::DecodeError(source))?;
-        Self::from_bytes(&bytes).map_err(|source| FromHexError::ConvertError(source))
+        let bytes = hex::decode(hex).map_err(FromHexError::DecodeError)?;
+        Self::from_bytes(&bytes).map_err(FromHexError::ConvertError)
     }
     /// Exports this symmetric key to a hex-encoded string.
     #[cfg(feature = "hex")]
@@ -48,8 +48,8 @@ impl<C: SymmetricCryptosystem> SymmetricKey<C> {
     #[cfg(feature = "base64")]
     pub fn from_base64(base64: &str, url_safe: bool) -> Result<Self, FromBase64Error<C::IoError>> {
         let bytes = base64_to_bytes(base64, url_safe)
-            .map_err(|source| FromBase64Error::DecodeError(source))?;
-        Self::from_bytes(&bytes).map_err(|source| FromBase64Error::ConvertError(source))
+            .map_err(FromBase64Error::DecodeError)?;
+        Self::from_bytes(&bytes).map_err(FromBase64Error::ConvertError)
     }
     /// Exports this symmetric key to a base64-encoded string.
     #[cfg(feature = "base64")]
