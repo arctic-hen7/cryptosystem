@@ -52,13 +52,6 @@ pub trait SigningCryptosystem: PublicKeyCryptosystem {
     ) -> Result<Self::Signature, <Self as SigningCryptosystem>::IoError>;
 }
 
-pub trait AsymmetricCryptosystem: PublicKeyCryptosystem {
-    type Error: std::error::Error;
-
-    fn encrypt(msg: &[u8], key: &Self::PublicKey) -> Result<Vec<u8>, Self::Error>;
-    fn decrypt(ciphertext: &[u8], key: &Self::SecretKey) -> Result<Vec<u8>, Self::Error>;
-}
-
 /// A trait for a collection of key exchange primitives that allow, from a public and secret key,
 /// the derivation of a shared secret, which can be used for communication. This is used in this
 /// library instead of a trait for direct asymmetric encryption, as key exchange, followed by

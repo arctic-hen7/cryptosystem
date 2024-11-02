@@ -9,11 +9,11 @@ use crate::error::FromHexError;
 use crate::error::FromPemError;
 use crate::CryptoError;
 use crate::{
-    cryptosystem::{AsymmetricCryptosystem, PublicKeyCryptosystem, SigningCryptosystem},
+    cryptosystem::{PublicKeyCryptosystem, SigningCryptosystem},
     PublicKey,
 };
 #[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 /// A secret key, which should be kept secret by some party to either decrypt messages encrypted by
 /// others for them with their public key, or to create signatures on messages that will be
@@ -146,30 +146,5 @@ impl<C: KeyExchangeCryptosystem> SecretKey<C> {
         public_key: &PublicKey<C>,
     ) -> Result<C::SharedSecret, C::Error> {
         C::generate_shared_secret(&self.key, &public_key.key)
-    }
-}
-
-impl<C: AsymmetricCryptosystem> SecretKey<C> {
-    /// Decrypts the given ciphertext bytes with this secret key, returning the raw plaintext
-    /// bytes.
-    pub fn decrypt_bytes(&self, ciphertext: &[u8]) -> Result<Vec<u8>, C::Error> {
-        C::decrypt(ciphertext, &self.key)
-    }
-    /// Decrypts the given ciphertext with this secret key, deserializing the resulting plaintext
-    /// bytes into the provided type.
-    ///
-    /// Note that the deserialization this performs after decryption will likely only work with
-    /// messages that were encrypted using these same systems, as [`bincode`]'s serialization
-    /// format is not standardised.
-    #[cfg(feature = "serde")]
-    pub fn decrypt<T: for<'de> Deserialize<'de>>(
-        &self,
-        ciphertext: &[u8],
-    ) -> Result<T, CryptoError<C::Error>> {
-        let plaintext_bytes = self
-            .decrypt_bytes(ciphertext)
-            .map_err(|source| CryptoError::ImplementationError { source })?;
-        bincode::deserialize(&plaintext_bytes)
-            .map_err(|source| CryptoError::DeserializationFailed { source })
     }
 }

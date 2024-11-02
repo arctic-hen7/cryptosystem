@@ -8,7 +8,7 @@ use crate::error::FromHexError;
 use crate::error::FromPemError;
 use crate::CryptoError;
 use crate::{
-    cryptosystem::{AsymmetricCryptosystem, PublicKeyCryptosystem, SigningCryptosystem},
+    cryptosystem::{PublicKeyCryptosystem, SigningCryptosystem},
     signature::Signature,
 };
 #[cfg(feature = "serde")]
@@ -129,27 +129,6 @@ impl<C: SigningCryptosystem> PublicKey<C> {
         let msg_bytes = bincode::serialize(&msg)
             .map_err(|source| CryptoError::SerializationFailed { source })?;
         C::verify(signature.inner(), &msg_bytes, &self.key)
-            .map_err(|source| CryptoError::ImplementationError { source })
-    }
-}
-
-impl<C: AsymmetricCryptosystem> PublicKey<C> {
-    /// Encrypts the given message bytes with this public key, returning the bytes of the
-    /// ciphertext.
-    pub fn encrypt_bytes(&self, msg: &[u8]) -> Result<Vec<u8>, C::Error> {
-        C::encrypt(msg, &self.key)
-    }
-    /// Encrypts the given message with this public key, first serializing the message to bytes
-    /// with [`bincode`].
-    ///
-    /// Note that encryption done this way is designed for decryption by these same systems. If you
-    /// need to encrypt data for another program, you should use some standardised way to convert
-    /// your message to bytes, and then use [`Self::encrypt_bytes`] instead.
-    #[cfg(feature = "serde")]
-    pub fn encrypt<T: Serialize>(&self, msg: &T) -> Result<Vec<u8>, CryptoError<C::Error>> {
-        let msg_bytes = bincode::serialize(msg)
-            .map_err(|source| CryptoError::SerializationFailed { source })?;
-        C::encrypt(&msg_bytes, &self.key)
             .map_err(|source| CryptoError::ImplementationError { source })
     }
 }

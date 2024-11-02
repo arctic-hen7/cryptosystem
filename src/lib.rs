@@ -10,8 +10,7 @@ mod signature;
 mod symmetric_key;
 
 pub use crate::cryptosystem::{
-    AsymmetricCryptosystem, KeyExchangeCryptosystem, PublicKeyCryptosystem, SigningCryptosystem,
-    SymmetricCryptosystem,
+    KeyExchangeCryptosystem, PublicKeyCryptosystem, SigningCryptosystem, SymmetricCryptosystem,
 };
 pub use crate::error::CryptoError;
 pub use crate::public_key::PublicKey;
