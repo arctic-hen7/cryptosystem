@@ -1,5 +1,5 @@
 [package]
-name = "generic-crypto"
+name = "cryptosystem"
 version = "0.1.0"
 edition = "2021"
 
