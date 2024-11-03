@@ -1,12 +1,6 @@
-#[cfg(feature = "base64")]
-use crate::base64_utils::{base64_to_bytes, bytes_to_base64};
-use crate::cryptosystem::SymmetricCryptosystem;
 #[cfg(feature = "serde")]
 use crate::error::CryptoError;
-#[cfg(feature = "base64")]
-use crate::error::FromBase64Error;
-#[cfg(feature = "hex")]
-use crate::error::FromHexError;
+use crate::{crypto_io::CryptoIo, cryptosystem::SymmetricCryptosystem};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -14,48 +8,22 @@ use serde::{Deserialize, Serialize};
 pub struct SymmetricKey<C: SymmetricCryptosystem> {
     key: C::Key,
 }
+impl<C: SymmetricCryptosystem> CryptoIo for SymmetricKey<C> {
+    type Error = C::IoError;
+
+    fn from_bytes(bytes: &[u8]) -> Result<Self, Self::Error> {
+        C::import_key(bytes).map(|key| Self { key })
+    }
+    fn to_bytes(&self) -> &[u8] {
+        C::export_key(&self.key)
+    }
+}
 impl<C: SymmetricCryptosystem> SymmetricKey<C> {
     /// Generates a new symmetric key.
     pub fn generate() -> Self {
         Self {
             key: C::generate_key(),
         }
-    }
-
-    /// Imports the given bytes as a symmetric key.
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, C::IoError> {
-        C::import_key(bytes).map(|key| Self { key })
-    }
-    /// Exports this symmetric key to bytes.
-    pub fn to_bytes(&self) -> &[u8] {
-        C::export_key(&self.key)
-    }
-
-    /// Imports the given hex-encoded string as a symmetric key.
-    #[cfg(feature = "hex")]
-    pub fn from_hex(hex: &str) -> Result<Self, FromHexError<C::IoError>> {
-        let bytes = hex::decode(hex).map_err(FromHexError::DecodeError)?;
-        Self::from_bytes(&bytes).map_err(FromHexError::ConvertError)
-    }
-    /// Exports this symmetric key to a hex-encoded string.
-    #[cfg(feature = "hex")]
-    pub fn to_hex(&self) -> String {
-        let bytes = self.to_bytes();
-        hex::encode(bytes)
-    }
-
-    /// Imports the given base64-encoded string as a symmetric key.
-    #[cfg(feature = "base64")]
-    pub fn from_base64(base64: &str, url_safe: bool) -> Result<Self, FromBase64Error<C::IoError>> {
-        let bytes = base64_to_bytes(base64, url_safe)
-            .map_err(FromBase64Error::DecodeError)?;
-        Self::from_bytes(&bytes).map_err(FromBase64Error::ConvertError)
-    }
-    /// Exports this symmetric key to a base64-encoded string.
-    #[cfg(feature = "base64")]
-    pub fn to_base64(&self, url_safe: bool) -> String {
-        let bytes = self.to_bytes();
-        bytes_to_base64(bytes, url_safe)
     }
 
     /// Encrypts the given message bytes, returning the bytes of the ciphertext.

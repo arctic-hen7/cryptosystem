@@ -1,14 +1,20 @@
 mod auto_tests;
 #[cfg(feature = "base64")]
 mod base64_utils;
+mod crypto_io;
 mod cryptosystem;
 mod defaults;
 mod error;
 mod public_key;
 mod secret_key;
+/// Custom implementations of serialization and deserialization for different encodings of
+/// cryptographic values. This also provides default implementations for standard base64.
+#[cfg(feature = "serde")]
+pub mod serde;
 mod signature;
 mod symmetric_key;
 
+pub use crate::crypto_io::*;
 pub use crate::cryptosystem::{
     KeyExchangeCryptosystem, PublicKeyCryptosystem, SigningCryptosystem, SymmetricCryptosystem,
 };
