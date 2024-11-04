@@ -2,7 +2,7 @@
 /// and decrypting with the same key, which is shared between parties).
 pub trait SymmetricCryptosystem {
     /// The type of the symmetric key used by this cryptosystem.
-    type Key;
+    type Key: Clone;
     /// The type of errors that can occur during encryption and decryption.
     type Error: std::error::Error;
     /// The type of errors that can occur when importing a key from bytes.
@@ -28,7 +28,7 @@ pub trait SymmetricCryptosystem {
 /// using their public key).
 pub trait SigningCryptosystem: PublicKeyCryptosystem {
     /// The type of signatures produced by this cryptosystem.
-    type Signature;
+    type Signature: Clone;
     /// Errors that can occur when signing or verifying messages.
     type Error: std::error::Error;
     /// Errors that can occur when importing or exporting signatures.
@@ -59,7 +59,7 @@ pub trait SigningCryptosystem: PublicKeyCryptosystem {
 /// ephemeral keys).
 pub trait KeyExchangeCryptosystem: PublicKeyCryptosystem {
     /// The type of shared secrets produced by this cryptosystem.
-    type SharedSecret;
+    type SharedSecret: Clone;
     /// The type of errors that can occur when generating shared secrets.
     type Error: std::error::Error;
 
@@ -80,9 +80,9 @@ pub trait KeyExchangeCryptosystem: PublicKeyCryptosystem {
 /// keys involved, providing the capacity to generate, import, and export them.
 pub trait PublicKeyCryptosystem {
     /// The type of public keys in this cryptosystem.
-    type PublicKey;
+    type PublicKey: Clone;
     /// The type of secret keys in this cryptosystem.
-    type SecretKey;
+    type SecretKey: Clone;
     /// The type of errors that can occur when importing or exporting keys.
     type IoError: std::error::Error;
 

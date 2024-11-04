@@ -124,7 +124,10 @@ macro_rules! key_exchange_cryptosystem_tests {
                 let bob_shared =
                     <$cs>::generate_shared_secret(&alice_sec_key, &bob_pub_key).unwrap();
 
-                assert_eq!(alice_shared.as_bytes(), bob_shared.as_bytes());
+                assert_eq!(
+                    <$cs>::export_shared_secret(&alice_shared),
+                    <$cs>::export_shared_secret(&bob_shared)
+                );
             }
         }
     };

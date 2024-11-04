@@ -1,7 +1,7 @@
 use crate::{key_exchange_cryptosystem_tests, KeyExchangeCryptosystem, PublicKeyCryptosystem};
 use rand::rngs::OsRng;
 use thiserror::Error;
-use x25519_dalek::{PublicKey, SharedSecret, StaticSecret};
+use x25519_dalek::{PublicKey, StaticSecret};
 
 /// A cryptosystem for key exchange using X25519.
 ///
@@ -73,18 +73,19 @@ impl PublicKeyCryptosystem for X25519Cryptosystem {
     }
 }
 impl KeyExchangeCryptosystem for X25519Cryptosystem {
-    type SharedSecret = SharedSecret;
+    // Need to use the raw bytes so we get cloning
+    type SharedSecret = [u8; 32];
     type Error = std::convert::Infallible;
 
     fn generate_shared_secret(
         secret_key: &Self::SecretKey,
         public_key: &Self::PublicKey,
     ) -> Result<Self::SharedSecret, Self::Error> {
-        Ok(secret_key.diffie_hellman(public_key))
+        Ok(secret_key.diffie_hellman(public_key).to_bytes())
     }
 
     fn export_shared_secret(shared_secret: &Self::SharedSecret) -> &[u8] {
-        shared_secret.as_bytes()
+        shared_secret
     }
 }
 
