@@ -13,6 +13,7 @@ use serde::Serialize;
 /// [`crate::AsymmetricCryptosystem`], or both. (Public keys are essential for key exchange, but
 /// have no operations performed on them beyond sending them to the other party, so implementing
 /// [`KeyExchangeCryptosystem`] doesn't provide any additional capabilities for this type.)
+#[derive(Clone)]
 pub struct PublicKey<C: PublicKeyCryptosystem> {
     pub(crate) key: C::PublicKey,
 }

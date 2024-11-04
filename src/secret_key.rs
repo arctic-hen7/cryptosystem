@@ -14,6 +14,7 @@ use serde::Serialize;
 /// type parameter `C` implements [`crate::SigningCryptosystem`],
 /// [`crate::AsymmetricCryptosystem`], [`crate::KeyExchangeCryptosystem`], or some combination of
 /// the three.
+#[derive(Clone)]
 pub struct SecretKey<C: PublicKeyCryptosystem> {
     key: C::SecretKey,
 }

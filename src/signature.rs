@@ -4,6 +4,7 @@ use crate::{crypto_io::CryptoIo, cryptosystem::SigningCryptosystem};
 /// corresponding public key. This is a wrapper type over whatever the underlying
 /// [`SigningCryptosystem`] considers a signature, providing convenience methods around importing
 /// and exporting.
+#[derive(Clone)]
 pub struct Signature<C: SigningCryptosystem> {
     pub(crate) signature: C::Signature,
 }

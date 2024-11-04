@@ -5,6 +5,7 @@ use crate::{crypto_io::CryptoIo, cryptosystem::SymmetricCryptosystem};
 use serde::{Deserialize, Serialize};
 
 /// A symmetric key, which can be used to encrypt and decrypt messages.
+#[derive(Clone)]
 pub struct SymmetricKey<C: SymmetricCryptosystem> {
     key: C::Key,
 }
