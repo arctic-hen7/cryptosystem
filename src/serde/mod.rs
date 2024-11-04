@@ -1,5 +1,6 @@
 use crate::{
-    CryptoIo, PublicKey, PublicKeyCryptosystem, SecretKey, SymmetricCryptosystem, SymmetricKey,
+    CryptoIo, PublicKey, PublicKeyCryptosystem, SecretKey, Signature, SigningCryptosystem,
+    SymmetricCryptosystem, SymmetricKey,
 };
 use serde::{Deserialize, Serialize};
 
@@ -167,5 +168,17 @@ impl<'de, C: SymmetricCryptosystem> Deserialize<'de> for SymmetricKey<C> {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let base64 = String::deserialize(deserializer)?;
         SymmetricKey::from_base64(&base64, false).map_err(serde::de::Error::custom)
+    }
+}
+
+impl<C: SigningCryptosystem> Serialize for Signature<C> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.to_base64(false).serialize(serializer)
+    }
+}
+impl<'de, C: SigningCryptosystem> Deserialize<'de> for Signature<C> {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let base64 = String::deserialize(deserializer)?;
+        Signature::from_base64(&base64, false).map_err(serde::de::Error::custom)
     }
 }
