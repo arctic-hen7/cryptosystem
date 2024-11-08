@@ -7,6 +7,7 @@ use rand::rngs::OsRng;
 use thiserror::Error;
 
 /// A cryptosystem using Ed25519 for signing and verification.
+#[derive(Clone, Copy)]
 pub struct Ed25519Cryptosystem;
 impl PublicKeyCryptosystem for Ed25519Cryptosystem {
     type PublicKey = VerifyingKey;

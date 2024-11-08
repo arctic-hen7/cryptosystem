@@ -1,6 +1,6 @@
 use crate::{
-    CryptoIo, PublicKey, PublicKeyCryptosystem, SecretKey, Signature, SigningCryptosystem,
-    SymmetricCryptosystem, SymmetricKey,
+    KeyExchangeCryptosystem, PublicKey, PublicKeyCryptosystem, SecretKey, SharedSecret, Signature,
+    SigningCryptosystem, SymmetricCryptosystem, SymmetricKey,
 };
 use serde::{Deserialize, Serialize};
 
@@ -14,16 +14,16 @@ macro_rules! impl_serde_str_mod {
         #[doc = $doc]
         pub mod $mod_name {
             use serde::{Deserialize, Deserializer, Serializer};
-            use $crate::CryptoIo;
+            use $crate::{CryptoExport, CryptoImport};
 
-            pub fn serialize<T: CryptoIo, S: Serializer>(
+            pub fn serialize<T: CryptoExport, S: Serializer>(
                 val: &T,
                 serializer: S,
             ) -> Result<S::Ok, S::Error> {
                 let val_str = $ser(val);
                 serializer.serialize_str(&format!("{}", val_str))
             }
-            pub fn deserialize<'de, T: CryptoIo, D: Deserializer<'de>>(
+            pub fn deserialize<'de, T: CryptoImport, D: Deserializer<'de>>(
                 deserializer: D,
             ) -> Result<T, D::Error> {
                 let val_str = String::deserialize(deserializer)?;
@@ -64,17 +64,17 @@ impl_serde_str_mod!(
 /// [`crate::CryptoDerIo`].
 #[cfg(feature = "pem")]
 pub mod pem {
-    use crate::CryptoDerIo;
+    use crate::{CryptoDerExport, CryptoDerImport};
     use serde::{Deserialize, Deserializer, Serializer};
 
-    pub fn serialize<T: CryptoDerIo, S: Serializer>(
+    pub fn serialize<T: CryptoDerExport, S: Serializer>(
         val: &T,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         let val_str = val.to_pem().map_err(serde::ser::Error::custom)?;
         serializer.serialize_str(&val_str)
     }
-    pub fn deserialize<'de, T: CryptoDerIo, D: Deserializer<'de>>(
+    pub fn deserialize<'de, T: CryptoDerImport, D: Deserializer<'de>>(
         deserializer: D,
     ) -> Result<T, D::Error> {
         let val_str = String::deserialize(deserializer)?;
@@ -89,17 +89,17 @@ pub mod pem {
 /// [`crate::CryptoDerIo`].
 #[cfg(feature = "der")]
 pub mod der_bytes {
-    use crate::CryptoDerIo;
+    use crate::{CryptoDerExport, CryptoDerImport};
     use serde::{Deserialize, Deserializer, Serializer};
 
-    pub fn serialize<T: CryptoDerIo, S: Serializer>(
+    pub fn serialize<T: CryptoDerExport, S: Serializer>(
         val: &T,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         let der_bytes = val.to_der().map_err(serde::ser::Error::custom)?;
         serializer.serialize_bytes(&der_bytes)
     }
-    pub fn deserialize<'de, T: CryptoDerIo, D: Deserializer<'de>>(
+    pub fn deserialize<'de, T: CryptoDerImport, D: Deserializer<'de>>(
         deserializer: D,
     ) -> Result<T, D::Error> {
         let val_bytes = Vec::<u8>::deserialize(deserializer)?;
@@ -112,17 +112,17 @@ pub mod der_bytes {
 /// A module for use with `#[serde(with = "..")]` for serializing and deserializing cryptographic
 /// values (e.g. keys) to and from raw bytes.
 pub mod bytes {
-    use crate::CryptoIo;
+    use crate::{CryptoExport, CryptoImport};
     use serde::{Deserialize, Deserializer, Serializer};
 
-    pub fn serialize<T: CryptoIo, S: Serializer>(
+    pub fn serialize<T: CryptoExport, S: Serializer>(
         val: &T,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         let bytes = val.to_bytes();
         serializer.serialize_bytes(bytes)
     }
-    pub fn deserialize<'de, T: CryptoIo, D: Deserializer<'de>>(
+    pub fn deserialize<'de, T: CryptoImport, D: Deserializer<'de>>(
         deserializer: D,
     ) -> Result<T, D::Error> {
         let bytes = Vec::<u8>::deserialize(deserializer)?;
@@ -137,48 +137,51 @@ pub mod bytes {
 
 impl<C: PublicKeyCryptosystem> Serialize for PublicKey<C> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.to_base64(false).serialize(serializer)
+        base64_standard::serialize(self, serializer)
     }
 }
 impl<'de, C: PublicKeyCryptosystem> Deserialize<'de> for PublicKey<C> {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let base64 = String::deserialize(deserializer)?;
-        PublicKey::from_base64(&base64, false).map_err(serde::de::Error::custom)
+        base64_standard::deserialize(deserializer)
     }
 }
 
 impl<C: PublicKeyCryptosystem> Serialize for SecretKey<C> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.to_base64(false).serialize(serializer)
+        base64_standard::serialize(self, serializer)
     }
 }
 impl<'de, C: PublicKeyCryptosystem> Deserialize<'de> for SecretKey<C> {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let base64 = String::deserialize(deserializer)?;
-        SecretKey::from_base64(&base64, false).map_err(serde::de::Error::custom)
+        base64_standard::deserialize(deserializer)
     }
 }
 
 impl<C: SymmetricCryptosystem> Serialize for SymmetricKey<C> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.to_base64(false).serialize(serializer)
+        base64_standard::serialize(self, serializer)
     }
 }
 impl<'de, C: SymmetricCryptosystem> Deserialize<'de> for SymmetricKey<C> {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let base64 = String::deserialize(deserializer)?;
-        SymmetricKey::from_base64(&base64, false).map_err(serde::de::Error::custom)
+        base64_standard::deserialize(deserializer)
     }
 }
 
 impl<C: SigningCryptosystem> Serialize for Signature<C> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.to_base64(false).serialize(serializer)
+        base64_standard::serialize(self, serializer)
     }
 }
 impl<'de, C: SigningCryptosystem> Deserialize<'de> for Signature<C> {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let base64 = String::deserialize(deserializer)?;
-        Signature::from_base64(&base64, false).map_err(serde::de::Error::custom)
+        base64_standard::deserialize(deserializer)
     }
 }
+
+impl<C: KeyExchangeCryptosystem> Serialize for SharedSecret<C> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        base64_standard::serialize(self, serializer)
+    }
+}
+// NOTE: Shared secrets can't be imported, so no deserializing impl

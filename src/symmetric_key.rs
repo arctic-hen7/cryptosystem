@@ -1,6 +1,9 @@
 #[cfg(feature = "serde")]
 use crate::error::CryptoError;
-use crate::{crypto_io::CryptoIo, cryptosystem::SymmetricCryptosystem};
+use crate::{
+    crypto_io::{CryptoExport, CryptoImport},
+    SymmetricCryptosystem,
+};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -9,12 +12,14 @@ use serde::{Deserialize, Serialize};
 pub struct SymmetricKey<C: SymmetricCryptosystem> {
     key: C::Key,
 }
-impl<C: SymmetricCryptosystem> CryptoIo for SymmetricKey<C> {
+impl<C: SymmetricCryptosystem> CryptoImport for SymmetricKey<C> {
     type Error = C::IoError;
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Self::Error> {
         C::import_key(bytes).map(|key| Self { key })
     }
+}
+impl<C: SymmetricCryptosystem> CryptoExport for SymmetricKey<C> {
     fn to_bytes(&self) -> &[u8] {
         C::export_key(&self.key)
     }

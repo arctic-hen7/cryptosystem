@@ -9,6 +9,7 @@ use thiserror::Error;
 pub type C7P7Cryptosystem = ChaCha20Poly1305Cryptosystem;
 
 /// A cryptosystem using ChaCha20Poly1305 for symmetric encryption.
+#[derive(Clone, Copy)]
 pub struct ChaCha20Poly1305Cryptosystem;
 impl SymmetricCryptosystem for ChaCha20Poly1305Cryptosystem {
     type Key = Key;

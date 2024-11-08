@@ -1,4 +1,4 @@
-use crate::crypto_io::{CryptoDerIo, CryptoIo};
+use crate::crypto_io::{CryptoDerExport, CryptoDerImport, CryptoExport, CryptoImport};
 use crate::CryptoError;
 use crate::{
     cryptosystem::{PublicKeyCryptosystem, SigningCryptosystem},
@@ -18,21 +18,32 @@ pub struct PublicKey<C: PublicKeyCryptosystem> {
     pub(crate) key: C::PublicKey,
 }
 
-impl<C: PublicKeyCryptosystem> CryptoIo for PublicKey<C> {
+impl<C: PublicKeyCryptosystem> CryptoImport for PublicKey<C> {
     type Error = C::IoError;
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Self::Error> {
         C::import_public_key_raw(bytes).map(|key| Self { key })
     }
+}
+impl<C: PublicKeyCryptosystem> CryptoExport for PublicKey<C> {
     fn to_bytes(&self) -> &[u8] {
         C::export_public_key_raw(&self.key)
     }
 }
 #[cfg(feature = "der")]
-impl<C: PublicKeyCryptosystem> CryptoDerIo for PublicKey<C> {
+impl<C: PublicKeyCryptosystem> CryptoDerImport for PublicKey<C> {
     fn from_der(der: &[u8]) -> Result<Self, C::IoError> {
         C::import_public_key_der(der).map(|key| Self { key })
     }
+    #[cfg(feature = "pem")]
+    fn pem_header() -> &'static str {
+        "PUBLIC KEY"
+    }
+}
+#[cfg(feature = "der")]
+impl<C: PublicKeyCryptosystem> CryptoDerExport for PublicKey<C> {
+    type Error = C::IoError;
+
     fn to_der(&self) -> Result<Vec<u8>, C::IoError> {
         C::export_public_key_der(&self.key)
     }

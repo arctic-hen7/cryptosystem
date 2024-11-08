@@ -1,8 +1,8 @@
 /// A trait for a collection of cryptographic primitives for symmetric encryption (i.e. encrypting
 /// and decrypting with the same key, which is shared between parties).
-pub trait SymmetricCryptosystem {
+pub trait SymmetricCryptosystem: Clone + Copy + Send + Sync {
     /// The type of the symmetric key used by this cryptosystem.
-    type Key: Clone;
+    type Key: Clone + Send + Sync;
     /// The type of errors that can occur during encryption and decryption.
     type Error: std::error::Error;
     /// The type of errors that can occur when importing a key from bytes.
@@ -26,9 +26,9 @@ pub trait SymmetricCryptosystem {
 /// A trait for a collection of cryptographic primitives for signing and verification (i.e. where
 /// the signer holds a secret key, and signatures created by them can be verified by other parties
 /// using their public key).
-pub trait SigningCryptosystem: PublicKeyCryptosystem {
+pub trait SigningCryptosystem: PublicKeyCryptosystem + Clone + Copy {
     /// The type of signatures produced by this cryptosystem.
-    type Signature: Clone;
+    type Signature: Clone + Send + Sync;
     /// Errors that can occur when signing or verifying messages.
     type Error: std::error::Error;
     /// Errors that can occur when importing or exporting signatures.
@@ -57,9 +57,9 @@ pub trait SigningCryptosystem: PublicKeyCryptosystem {
 /// library instead of a trait for direct asymmetric encryption, as key exchange, followed by
 /// symmetric encryption, tends to be more flexible and more secure (especially when used with
 /// ephemeral keys).
-pub trait KeyExchangeCryptosystem: PublicKeyCryptosystem {
+pub trait KeyExchangeCryptosystem: PublicKeyCryptosystem + Clone + Copy {
     /// The type of shared secrets produced by this cryptosystem.
-    type SharedSecret: Clone;
+    type SharedSecret: Clone + Send + Sync;
     /// The type of errors that can occur when generating shared secrets.
     type Error: std::error::Error;
 
@@ -78,11 +78,11 @@ pub trait KeyExchangeCryptosystem: PublicKeyCryptosystem {
 /// A trait for a collection of asymmetric cryptographic primitives. This trait by itself does not
 /// provide any useful things for these primitives to do, it only looks at the public and secret
 /// keys involved, providing the capacity to generate, import, and export them.
-pub trait PublicKeyCryptosystem {
+pub trait PublicKeyCryptosystem: Clone + Copy {
     /// The type of public keys in this cryptosystem.
-    type PublicKey: Clone;
+    type PublicKey: Clone + Send + Sync;
     /// The type of secret keys in this cryptosystem.
-    type SecretKey: Clone;
+    type SecretKey: Clone + Send + Sync;
     /// The type of errors that can occur when importing or exporting keys.
     type IoError: std::error::Error;
 

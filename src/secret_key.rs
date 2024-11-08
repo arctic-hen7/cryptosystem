@@ -1,4 +1,4 @@
-use crate::crypto_io::{CryptoDerIo, CryptoIo};
+use crate::crypto_io::{CryptoDerExport, CryptoDerImport, CryptoExport, CryptoImport};
 use crate::cryptosystem::KeyExchangeCryptosystem;
 use crate::CryptoError;
 use crate::{
@@ -18,21 +18,32 @@ use serde::Serialize;
 pub struct SecretKey<C: PublicKeyCryptosystem> {
     key: C::SecretKey,
 }
-impl<C: PublicKeyCryptosystem> CryptoIo for SecretKey<C> {
+impl<C: PublicKeyCryptosystem> CryptoImport for SecretKey<C> {
     type Error = C::IoError;
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Self::Error> {
         C::import_secret_key_raw(bytes).map(|key| Self { key })
     }
+}
+impl<C: PublicKeyCryptosystem> CryptoExport for SecretKey<C> {
     fn to_bytes(&self) -> &[u8] {
         C::export_secret_key_raw(&self.key)
     }
 }
 #[cfg(feature = "der")]
-impl<C: PublicKeyCryptosystem> CryptoDerIo for SecretKey<C> {
+impl<C: PublicKeyCryptosystem> CryptoDerImport for SecretKey<C> {
     fn from_der(der: &[u8]) -> Result<Self, Self::Error> {
         C::import_secret_key_der(der).map(|key| Self { key })
     }
+    #[cfg(feature = "pem")]
+    fn pem_header() -> &'static str {
+        "PRIVATE KEY"
+    }
+}
+#[cfg(feature = "der")]
+impl<C: PublicKeyCryptosystem> CryptoDerExport for SecretKey<C> {
+    type Error = C::IoError;
+
     fn to_der(&self) -> Result<Vec<u8>, Self::Error> {
         C::export_secret_key_der(&self.key)
     }

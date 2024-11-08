@@ -5,10 +5,10 @@ use crate::error::FromHexError;
 #[cfg(feature = "pem")]
 use crate::error::FromPemError;
 
-/// A trait for cryptographic values that can be imported and exported to/from a variety of
-/// formats, based on their raw byte encodings. The formats available depend on the feature flags
-/// (currently `hex` and `base64`).
-pub trait CryptoIo {
+/// A trait for cryptographic values that can be imported from a variety of formats, based on their
+/// raw byte encodings. The formats available depend on the feature flags (currently `hex` and
+/// `base64`).
+pub trait CryptoImport {
     type Error: std::error::Error;
 
     /// Imports this cryptographic value from the given bytes.
@@ -18,11 +18,6 @@ pub trait CryptoIo {
     fn from_bytes(bytes: &[u8]) -> Result<Self, Self::Error>
     where
         Self: Sized;
-    /// Exports this cryptographic value to bytes.
-    ///
-    /// For types that also implement [`CryptoDerIo`], this will be the *raw* bytes, not the
-    /// DER-encoded bytes!
-    fn to_bytes(&self) -> &[u8];
 
     /// Imports this cryptographic value from the given hex-encoded string.
     ///
@@ -35,15 +30,6 @@ pub trait CryptoIo {
     {
         let bytes = hex::decode(hex).map_err(FromHexError::DecodeError)?;
         Self::from_bytes(&bytes).map_err(FromHexError::ConvertError)
-    }
-    /// Exports this cryptographic value to a hex-encoded string.
-    ///
-    /// For types that also implement [`CryptoDerIo`], this will be a hex encoding of the *raw*
-    /// bytes, *not* the DER-encoded bytes!
-    #[cfg(feature = "hex")]
-    fn to_hex(&self) -> String {
-        let bytes = self.to_bytes();
-        hex::encode(bytes)
     }
 
     /// Imports this cryptographic value from the given base64-encoded string.
@@ -60,6 +46,28 @@ pub trait CryptoIo {
         let bytes = base64_to_bytes(base64, url_safe).map_err(FromBase64Error::DecodeError)?;
         Self::from_bytes(&bytes).map_err(FromBase64Error::ConvertError)
     }
+}
+
+/// A trait for cryptographic values that can be exported to a variety of formats, based on their
+/// raw byte encodings. The formats available depend on the feature flags (currently `hex` and
+/// `base64`).
+pub trait CryptoExport {
+    /// Exports this cryptographic value to bytes.
+    ///
+    /// For types that also implement [`CryptoDerIo`], this will be the *raw* bytes, not the
+    /// DER-encoded bytes!
+    fn to_bytes(&self) -> &[u8];
+
+    /// Exports this cryptographic value to a hex-encoded string.
+    ///
+    /// For types that also implement [`CryptoDerIo`], this will be a hex encoding of the *raw*
+    /// bytes, *not* the DER-encoded bytes!
+    #[cfg(feature = "hex")]
+    fn to_hex(&self) -> String {
+        let bytes = self.to_bytes();
+        hex::encode(bytes)
+    }
+
     /// Exports this cryptographic value to a base64-encoded string.
     ///
     /// For types that also implement [`CryptoDerIo`], this will be a base64 encoding of the *raw*
@@ -73,14 +81,13 @@ pub trait CryptoIo {
     }
 }
 
+/// A trait for cryptographic values that can be imported from DER (and PEM, if `pem` is enabled).
 #[cfg(feature = "der")]
-pub trait CryptoDerIo: CryptoIo {
+pub trait CryptoDerImport: CryptoImport {
     /// Imports this cryptographic value from the given DER-encoded bytes.
     fn from_der(der: &[u8]) -> Result<Self, Self::Error>
     where
         Self: Sized;
-    /// Exports this cryptographic value to DER-encoded bytes.
-    fn to_der(&self) -> Result<Vec<u8>, Self::Error>;
 
     /// Gets the text that will appear in the header and footer of a PEM encoding of this value.
     /// For example, if this returns `PUBLIC KEY`, the PEM string will start with `-----BEGIN
@@ -111,6 +118,23 @@ pub trait CryptoDerIo: CryptoIo {
         let bytes = base64_to_bytes(base64, false).map_err(FromPemError::DecodeError)?;
         Self::from_bytes(&bytes).map_err(FromPemError::ConvertError)
     }
+}
+
+/// A trait for cryptographic values that can be exported to DER (and PEM, if `pem` is enabled).
+#[cfg(feature = "der")]
+pub trait CryptoDerExport: CryptoExport {
+    /// Errors that can occur while exporting to DER.
+    type Error: std::error::Error;
+
+    /// Exports this cryptographic value to DER-encoded bytes.
+    fn to_der(&self) -> Result<Vec<u8>, Self::Error>;
+
+    /// Gets the text that will appear in the header and footer of a PEM encoding of this value.
+    /// For example, if this returns `PUBLIC KEY`, the PEM string will start with `-----BEGIN
+    /// PUBLIC KEY-----` and end with `-----END PUBLIC KEY-----`.
+    #[cfg(feature = "pem")]
+    fn pem_header() -> &'static str;
+
     /// Exports this cryptographic value to a PEM-encoded string, whose header aand footer will be
     /// based on the [`Self::pem_header`] method.
     #[cfg(feature = "pem")]
