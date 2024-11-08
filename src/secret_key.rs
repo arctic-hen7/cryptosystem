@@ -1,10 +1,10 @@
 use crate::crypto_io::{CryptoDerExport, CryptoDerImport, CryptoExport, CryptoImport};
 use crate::cryptosystem::KeyExchangeCryptosystem;
-use crate::CryptoError;
 use crate::{
     cryptosystem::{PublicKeyCryptosystem, SigningCryptosystem},
     PublicKey,
 };
+use crate::{CryptoError, SharedSecret, Signature};
 #[cfg(feature = "serde")]
 use serde::Serialize;
 
@@ -63,8 +63,9 @@ impl<C: PublicKeyCryptosystem> SecretKey<C> {
 
 impl<C: SigningCryptosystem> SecretKey<C> {
     /// Signs the given message bytes with this secret key.
-    pub fn sign_bytes(&self, msg: &[u8]) -> Result<C::Signature, C::Error> {
-        C::sign(msg, &self.key)
+    pub fn sign_bytes(&self, msg: &[u8]) -> Result<Signature<C>, C::Error> {
+        let raw = C::sign(msg, &self.key)?;
+        Ok(Signature { signature: raw })
     }
     /// Signs the given message with this secret key, first serializing the message to bytes with
     /// [`bincode`].
@@ -73,7 +74,7 @@ impl<C: SigningCryptosystem> SecretKey<C> {
     /// need to sign data for another program, you should use some standardised way to convert
     /// your message to bytes, and then use [`Self::sign_bytes`] instead.
     #[cfg(feature = "serde")]
-    pub fn sign<T: Serialize>(&self, msg: T) -> Result<C::Signature, CryptoError<C::Error>> {
+    pub fn sign<T: Serialize>(&self, msg: T) -> Result<Signature<C>, CryptoError<C::Error>> {
         let msg_bytes = bincode::serialize(&msg)
             .map_err(|source| CryptoError::SerializationFailed { source })?;
         self.sign_bytes(&msg_bytes)
@@ -87,7 +88,8 @@ impl<C: KeyExchangeCryptosystem> SecretKey<C> {
     pub fn generate_shared_secret(
         &self,
         public_key: &PublicKey<C>,
-    ) -> Result<C::SharedSecret, C::Error> {
-        C::generate_shared_secret(&self.key, &public_key.key)
+    ) -> Result<SharedSecret<C>, C::Error> {
+        let raw = C::generate_shared_secret(&self.key, &public_key.key)?;
+        Ok(SharedSecret { shared_secret: raw })
     }
 }
