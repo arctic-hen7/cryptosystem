@@ -1,6 +1,6 @@
 use crate::{
-    KeyExchangeCryptosystem, PublicKey, PublicKeyCryptosystem, SecretKey, SharedSecret, Signature,
-    SigningCryptosystem, SymmetricCryptosystem, SymmetricKey,
+    ciphertext::Ciphertext, KeyExchangeCryptosystem, PublicKey, PublicKeyCryptosystem, SecretKey,
+    SharedSecret, Signature, SigningCryptosystem, SymmetricCryptosystem, SymmetricKey,
 };
 use serde::{Deserialize, Serialize};
 
@@ -174,6 +174,17 @@ impl<C: SigningCryptosystem> Serialize for Signature<C> {
     }
 }
 impl<'de, C: SigningCryptosystem> Deserialize<'de> for Signature<C> {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        base64_standard::deserialize(deserializer)
+    }
+}
+
+impl Serialize for Ciphertext {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        base64_standard::serialize(self, serializer)
+    }
+}
+impl<'de> Deserialize<'de> for Ciphertext {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         base64_standard::deserialize(deserializer)
     }

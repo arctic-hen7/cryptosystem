@@ -1,6 +1,7 @@
 #[cfg(feature = "serde")]
 use crate::error::CryptoError;
 use crate::{
+    ciphertext::Ciphertext,
     crypto_io::{CryptoExport, CryptoImport},
     SymmetricCryptosystem,
 };
@@ -32,13 +33,13 @@ impl<C: SymmetricCryptosystem> SymmetricKey<C> {
         }
     }
 
-    /// Encrypts the given message bytes, returning the bytes of the ciphertext.
-    pub fn encrypt_bytes(&self, msg: &[u8]) -> Result<Vec<u8>, C::Error> {
-        C::encrypt(msg, &self.key)
+    /// Encrypts the given message bytes, returning the ciphertext.
+    pub fn encrypt_bytes(&self, msg: &[u8]) -> Result<Ciphertext, C::Error> {
+        C::encrypt(msg, &self.key).map(Ciphertext::from)
     }
     /// Decrypts the given ciphertext bytes, returning the bytes of the plaintext.
-    pub fn decrypt_bytes(&self, ciphertext: &[u8]) -> Result<Vec<u8>, C::Error> {
-        C::decrypt(ciphertext, &self.key)
+    pub fn decrypt_bytes(&self, ciphertext: &Ciphertext) -> Result<Vec<u8>, C::Error> {
+        C::decrypt(ciphertext.to_bytes(), &self.key)
     }
 
     /// Encrypts the given message, returning the bytes of the ciphertext, but first serializing
@@ -49,7 +50,7 @@ impl<C: SymmetricCryptosystem> SymmetricKey<C> {
     /// different systems, first serialize your message to bytes in some standardised way the other
     /// system can do too, and then use [`Self::encrypt_bytes`].
     #[cfg(feature = "serde")]
-    pub fn encrypt<T: Serialize>(&self, msg: &T) -> Result<Vec<u8>, CryptoError<C::Error>> {
+    pub fn encrypt<T: Serialize>(&self, msg: &T) -> Result<Ciphertext, CryptoError<C::Error>> {
         let msg_bytes = bincode::serialize(msg)
             .map_err(|source| CryptoError::SerializationFailed { source })?;
         self.encrypt_bytes(&msg_bytes)
@@ -61,7 +62,7 @@ impl<C: SymmetricCryptosystem> SymmetricKey<C> {
     #[cfg(feature = "serde")]
     pub fn decrypt<T: for<'de> Deserialize<'de>>(
         &self,
-        ciphertext: &[u8],
+        ciphertext: &Ciphertext,
     ) -> Result<T, CryptoError<C::Error>> {
         let plaintext_bytes = self
             .decrypt_bytes(ciphertext)

@@ -1,6 +1,7 @@
 mod auto_tests;
 #[cfg(feature = "base64")]
 mod base64_utils;
+mod ciphertext;
 mod crypto_io;
 mod cryptosystem;
 mod defaults;
