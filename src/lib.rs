@@ -16,6 +16,7 @@ mod shared_secret;
 mod signature;
 mod symmetric_key;
 
+pub use crate::ciphertext::Ciphertext;
 pub use crate::crypto_io::*;
 pub use crate::cryptosystem::{
     KeyExchangeCryptosystem, PublicKeyCryptosystem, SigningCryptosystem, SymmetricCryptosystem,
