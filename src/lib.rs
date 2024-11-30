@@ -21,7 +21,7 @@ pub use crate::crypto_io::*;
 pub use crate::cryptosystem::{
     KeyExchangeCryptosystem, PublicKeyCryptosystem, SigningCryptosystem, SymmetricCryptosystem,
 };
-pub use crate::error::CryptoError;
+pub use crate::error::*;
 pub use crate::public_key::PublicKey;
 pub use crate::secret_key::SecretKey;
 pub use crate::shared_secret::SharedSecret;
