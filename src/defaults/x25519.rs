@@ -8,7 +8,7 @@ use x25519_dalek::{PublicKey, StaticSecret};
 /// Note: elliptic curve cryptography doesn't use direct asymmetric encryption like RSA, and
 /// instead you should use this cryptosystem to derive a shared secret, and then you can use that
 /// as a symmetric key.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct X25519Cryptosystem;
 impl PublicKeyCryptosystem for X25519Cryptosystem {
     type PublicKey = PublicKey;
