@@ -104,11 +104,11 @@ macro_rules! signing_cryptosystem_tests {
 /// represent an absolute minimum to test that the given cryptosystem is actually usable, and
 /// should be extended by the implementor.
 #[macro_export]
-macro_rules! key_exchange_cryptosystem_tests {
+macro_rules! key_encapsulation_cryptosystem_tests {
     ($cs:ty) => {
         #[cfg(test)]
         mod __key_exchange_cryptosystem_tests {
-            use $crate::cryptosystem::{KeyExchangeCryptosystem, PublicKeyCryptosystem};
+            use $crate::cryptosystem::{KeyEncapsulationCryptosystem, PublicKeyCryptosystem};
 
             #[test]
             fn generate_keypair_succeeds() {
@@ -116,13 +116,10 @@ macro_rules! key_exchange_cryptosystem_tests {
             }
             #[test]
             fn derive_shared_secret_succeeds() {
-                let (alice_pub_key, alice_sec_key) = <$cs>::generate_keypair();
                 let (bob_pub_key, bob_sec_key) = <$cs>::generate_keypair();
 
-                let alice_shared =
-                    <$cs>::generate_shared_secret(&bob_sec_key, &alice_pub_key).unwrap();
-                let bob_shared =
-                    <$cs>::generate_shared_secret(&alice_sec_key, &bob_pub_key).unwrap();
+                let (encapsulation, alice_shared) = <$cs>::encapsulate(&bob_pub_key).unwrap();
+                let bob_shared = <$cs>::decapsulate(&encapsulation, &bob_sec_key).unwrap();
 
                 assert_eq!(
                     <$cs>::export_shared_secret(&alice_shared),

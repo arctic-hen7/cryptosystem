@@ -1,9 +1,10 @@
 use crate::crypto_io::{CryptoDerExport, CryptoDerImport, CryptoExport, CryptoImport};
-use crate::CryptoError;
+use crate::shared_secret::Encapsulation;
 use crate::{
     cryptosystem::{PublicKeyCryptosystem, SigningCryptosystem},
     signature::Signature,
 };
+use crate::{CryptoError, KeyEncapsulationCryptosystem, SharedSecret};
 #[cfg(feature = "serde")]
 use serde::Serialize;
 
@@ -73,5 +74,23 @@ impl<C: SigningCryptosystem> PublicKey<C> {
             .map_err(|source| CryptoError::SerializationFailed { source })?;
         C::verify(&signature.signature, &msg_bytes, &self.key)
             .map_err(|source| CryptoError::ImplementationError { source })
+    }
+}
+
+impl<C: KeyEncapsulationCryptosystem> PublicKey<C> {
+    /// Encapsulates a random shared secret to this public key (such that the owner will be able to
+    /// decapsulate it with their secret key). This is similar to encrypting a message to someone's
+    /// public key, except the message is random (a shared secret), and is returned by this
+    /// function. When the other party "decapsulates", they will get the same shared secret, which
+    /// can be used as a symmetric key.
+    pub fn encapsulate(&self) -> Result<(Encapsulation<C>, SharedSecret<C>), C::Error> {
+        let (encapsulation, shared_secret) = C::encapsulate(&self.key)?;
+
+        Ok((
+            Encapsulation {
+                inner: encapsulation,
+            },
+            SharedSecret { shared_secret },
+        ))
     }
 }

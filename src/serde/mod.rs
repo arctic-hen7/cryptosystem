@@ -1,6 +1,7 @@
 use crate::{
-    ciphertext::Ciphertext, KeyExchangeCryptosystem, PublicKey, PublicKeyCryptosystem, SecretKey,
-    SharedSecret, Signature, SigningCryptosystem, SymmetricCryptosystem, SymmetricKey,
+    ciphertext::Ciphertext, shared_secret::Encapsulation, KeyEncapsulationCryptosystem, PublicKey,
+    PublicKeyCryptosystem, SecretKey, SharedSecret, Signature, SigningCryptosystem,
+    SymmetricCryptosystem, SymmetricKey,
 };
 use serde::{Deserialize, Serialize};
 
@@ -190,7 +191,18 @@ impl<'de> Deserialize<'de> for Ciphertext {
     }
 }
 
-impl<C: KeyExchangeCryptosystem> Serialize for SharedSecret<C> {
+impl<C: KeyEncapsulationCryptosystem> Serialize for Encapsulation<C> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        base64_standard::serialize(self, serializer)
+    }
+}
+impl<'de, C: KeyEncapsulationCryptosystem> Deserialize<'de> for Encapsulation<C> {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        base64_standard::deserialize(deserializer)
+    }
+}
+
+impl<C: KeyEncapsulationCryptosystem> Serialize for SharedSecret<C> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         base64_standard::serialize(self, serializer)
     }

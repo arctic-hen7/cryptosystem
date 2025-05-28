@@ -19,7 +19,7 @@ mod symmetric_key;
 pub use crate::ciphertext::Ciphertext;
 pub use crate::crypto_io::*;
 pub use crate::cryptosystem::{
-    KeyExchangeCryptosystem, PublicKeyCryptosystem, SigningCryptosystem, SymmetricCryptosystem,
+    KeyEncapsulationCryptosystem, PublicKeyCryptosystem, SigningCryptosystem, SymmetricCryptosystem,
 };
 pub use crate::error::*;
 pub use crate::public_key::PublicKey;

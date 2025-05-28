@@ -52,23 +52,71 @@ pub trait SigningCryptosystem: PublicKeyCryptosystem + Clone + Copy {
     ) -> Result<Self::Signature, <Self as SigningCryptosystem>::IoError>;
 }
 
-/// A trait for a collection of key exchange primitives that allow, from a public and secret key,
-/// the derivation of a shared secret, which can be used for communication. This is used in this
-/// library instead of a trait for direct asymmetric encryption, as key exchange, followed by
-/// symmetric encryption, tends to be more flexible and more secure (especially when used with
-/// ephemeral keys).
-pub trait KeyExchangeCryptosystem: PublicKeyCryptosystem + Clone + Copy {
+// /// A trait for a collection of key exchange primitives that allow, from a public and secret key,
+// /// the derivation of a shared secret, which can be used for communication. This is used in this
+// /// library instead of a trait for direct asymmetric encryption, as key exchange, followed by
+// /// symmetric encryption, tends to be more flexible and more secure (especially when used with
+// /// ephemeral keys).
+// pub trait KeyExchangeCryptosystem: PublicKeyCryptosystem + Clone + Copy {
+//     /// The type of shared secrets produced by this cryptosystem.
+//     type SharedSecret: Clone + Send + Sync;
+//     /// The type of errors that can occur when generating shared secrets.
+//     type Error: std::error::Error;
+//
+//     /// Generates a shared secret for communication with some other party, given their public key
+//     /// and our secret key.
+//     fn generate_shared_secret(
+//         secret_key: &Self::SecretKey,
+//         public_key: &Self::PublicKey,
+//     ) -> Result<Self::SharedSecret, Self::Error>;
+//
+//     /// Exports the given shared secret to raw bytes, without any additional formatting. It is
+//     /// assumed that this will never need to be imported again.
+//     fn export_shared_secret(shared_secret: &Self::SharedSecret) -> &[u8];
+// }
+
+/// A trait for a collection of key encapsulation primitives that allow a public key to be used to
+/// send a random shared secret to its owner, who can decrypt it with their secret key. This is
+/// similar to key exchange, though only *one* party contributes the shared secret here, as opposed
+/// to both. Crucially, encapsulating a random key from Alice to Bob is *not* the same as
+/// encapsulating a key from Bob to Alice, even if the randomness were engineered to be identical
+/// (insecure), hence the difference with multi-party key exchange.
+///
+/// Key encapsulation is more common among post-quantum primitives, and can always be built from
+/// key exchange, while the reverse is not true. Hence, we have chosen to implement key
+/// encapsulation as the core primitive of this library, rather than key exchange.
+pub trait KeyEncapsulationCryptosystem: PublicKeyCryptosystem + Clone + Copy {
     /// The type of shared secrets produced by this cryptosystem.
     type SharedSecret: Clone + Send + Sync;
+    /// The type of encapsulations produced by this cryptosystem, which are sent from one party to
+    /// the other to facilitate shared secret derivation.
+    type Encapsulation: Clone + Send + Sync;
     /// The type of errors that can occur when generating shared secrets.
     type Error: std::error::Error;
+    /// The type of errors that can occur when importing encapsulations.
+    type IoError: std::error::Error;
 
-    /// Generates a shared secret for communication with some other party, given their public key
-    /// and our secret key.
-    fn generate_shared_secret(
-        secret_key: &Self::SecretKey,
+    /// Encapsulates a random shared secret to the given public (encapsulation) key. The result is
+    /// first the encapsulation, which should be sent to the other party, and the shared secret,
+    /// which will be the same as what they "decapsulate".
+    fn encapsulate(
         public_key: &Self::PublicKey,
+    ) -> Result<(Self::Encapsulation, Self::SharedSecret), Self::Error>;
+
+    /// Decapsulates the given encapsulation with the given secret key. The encapsulation provided
+    /// must have been encapsulated to the corresponding public key, or this will fail.
+    fn decapsulate(
+        encapsulation: &Self::Encapsulation,
+        secret_key: &Self::SecretKey,
     ) -> Result<Self::SharedSecret, Self::Error>;
+
+    /// Imports an encapsulation from the given raw byte slice.
+    fn import_encapsulation(
+        encapsulation: &[u8],
+    ) -> Result<Self::Encapsulation, <Self as KeyEncapsulationCryptosystem>::IoError>;
+
+    /// Exports the given encapsulation to raw bytes, without any additional formatting.
+    fn export_encapsulation(encapsulation: &Self::Encapsulation) -> &[u8];
 
     /// Exports the given shared secret to raw bytes, without any additional formatting. It is
     /// assumed that this will never need to be imported again.

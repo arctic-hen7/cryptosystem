@@ -1,5 +1,5 @@
 use crate::crypto_io::{CryptoDerExport, CryptoDerImport, CryptoExport, CryptoImport};
-use crate::cryptosystem::KeyExchangeCryptosystem;
+use crate::cryptosystem::KeyEncapsulationCryptosystem;
 use crate::{
     cryptosystem::{PublicKeyCryptosystem, SigningCryptosystem},
     PublicKey,
@@ -82,14 +82,14 @@ impl<C: SigningCryptosystem> SecretKey<C> {
     }
 }
 
-impl<C: KeyExchangeCryptosystem> SecretKey<C> {
-    /// Generates a shared secret for communication with some other party, given their public key.
-    /// This could then be used to seed a symmetric encryption key, for example.
-    pub fn generate_shared_secret(
+impl<C: KeyEncapsulationCryptosystem> SecretKey<C> {
+    /// Decapsulates the given encapsulation to derive a shared secret with another party (who made
+    /// and sent the encapsulation using our public key).
+    pub fn decapsulate(
         &self,
-        public_key: &PublicKey<C>,
+        encapsulation: &C::Encapsulation,
     ) -> Result<SharedSecret<C>, C::Error> {
-        let raw = C::generate_shared_secret(&self.key, &public_key.key)?;
+        let raw = C::decapsulate(encapsulation, &self.key)?;
         Ok(SharedSecret { shared_secret: raw })
     }
 }

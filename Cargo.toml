@@ -15,9 +15,10 @@ chacha20poly1305 = { version = "0.10.1", optional = true }
 ecies-ed25519 = { version = "0.5.1", optional = true }
 ring = { version = "0.17.13", optional = true }
 rand = { version = "0.8.5", optional = true }
+ml-kem = { version = "0.2.1", optional = true }
 
 [features]
-default = [ "serde", "hex", "base64", "der", "pem", "default-chacha20poly1305", "default-ed25519", "default-x25519" ]
+default = [ "serde", "hex", "base64", "der", "pem", "default-chacha20poly1305", "default-ed25519", "default-x25519", "default-kyber" ]
 
 serde = [ "dep:serde", "bincode" ]
 der = []
@@ -26,3 +27,4 @@ pem = [ "der", "base64", "ed25519-dalek?/pkcs8" ]
 default-chacha20poly1305 = [ "chacha20poly1305" ]
 default-ed25519 = [ "ed25519-dalek", "rand" ]
 default-x25519 = [ "x25519-dalek" ]
+default-kyber = [ "ml-kem" ]

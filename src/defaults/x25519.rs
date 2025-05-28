@@ -1,4 +1,6 @@
-use crate::{key_exchange_cryptosystem_tests, KeyExchangeCryptosystem, PublicKeyCryptosystem};
+use crate::{
+    key_encapsulation_cryptosystem_tests, KeyEncapsulationCryptosystem, PublicKeyCryptosystem,
+};
 use rand::rngs::OsRng;
 use thiserror::Error;
 use x25519_dalek::{PublicKey, StaticSecret};
@@ -13,7 +15,7 @@ pub struct X25519Cryptosystem;
 impl PublicKeyCryptosystem for X25519Cryptosystem {
     type PublicKey = PublicKey;
     type SecretKey = StaticSecret;
-    type IoError = X25519IoError;
+    type IoError = InvalidKeyLen;
 
     fn generate_keypair() -> (Self::PublicKey, Self::SecretKey) {
         let secret_key = StaticSecret::random_from_rng(OsRng);
@@ -28,9 +30,7 @@ impl PublicKeyCryptosystem for X25519Cryptosystem {
     fn import_public_key_raw(key: &[u8]) -> Result<Self::PublicKey, Self::IoError> {
         let mut buf = [0u8; 32];
         if key.len() != buf.len() {
-            // We can borrow this error type, it's opaque anyway and byte length issues are
-            // documented as a possible error source
-            return Err(X25519IoError::InvalidKeyLen(key.len()));
+            return Err(InvalidKeyLen(key.len()));
         }
         buf.copy_from_slice(key);
 
@@ -55,9 +55,7 @@ impl PublicKeyCryptosystem for X25519Cryptosystem {
     fn import_secret_key_raw(key: &[u8]) -> Result<Self::SecretKey, Self::IoError> {
         let mut buf = [0u8; 32];
         if key.len() != buf.len() {
-            // We can borrow this error type, it's opaque anyway and byte length issues are
-            // documented as a possible error source
-            return Err(X25519IoError::InvalidKeyLen(key.len()));
+            return Err(InvalidKeyLen(key.len()));
         }
         buf.copy_from_slice(key);
 
@@ -73,16 +71,51 @@ impl PublicKeyCryptosystem for X25519Cryptosystem {
         todo!("der support not yet implemented for x25519")
     }
 }
-impl KeyExchangeCryptosystem for X25519Cryptosystem {
+impl KeyEncapsulationCryptosystem for X25519Cryptosystem {
     // Need to use the raw bytes so we get cloning
     type SharedSecret = [u8; 32];
+    type Encapsulation = [u8; 32];
     type Error = std::convert::Infallible;
+    type IoError = InvalidEncapsulationLen;
 
-    fn generate_shared_secret(
-        secret_key: &Self::SecretKey,
+    // Encapsulate by creating an ephemeral keypair and sending the public key
+    fn encapsulate(
         public_key: &Self::PublicKey,
+    ) -> Result<(Self::Encapsulation, Self::SharedSecret), Self::Error> {
+        let ephemeral_secret_key = StaticSecret::random_from_rng(OsRng);
+        let ephemeral_public_key = PublicKey::from(&ephemeral_secret_key);
+
+        let shared_secret = ephemeral_secret_key.diffie_hellman(public_key).to_bytes();
+        let encapsulation = ephemeral_public_key.as_bytes().to_owned();
+        Ok((encapsulation, shared_secret))
+    }
+
+    // Then decapsulate with regular Diffie-Hellman
+    fn decapsulate(
+        encapsulation: &Self::Encapsulation,
+        secret_key: &Self::SecretKey,
     ) -> Result<Self::SharedSecret, Self::Error> {
-        Ok(secret_key.diffie_hellman(public_key).to_bytes())
+        // Any 32-byte slice is a valid public key: the encapsulation guarantees the length, so
+        // this is safe
+        let ephemeral_public_key = PublicKey::from(*encapsulation);
+        Ok(secret_key.diffie_hellman(&ephemeral_public_key).to_bytes())
+    }
+
+    // Same as importing a public key (because we are)
+    fn import_encapsulation(
+        encapsulation: &[u8],
+    ) -> Result<Self::Encapsulation, <Self as KeyEncapsulationCryptosystem>::IoError> {
+        let mut buf = [0u8; 32];
+        if encapsulation.len() != buf.len() {
+            return Err(InvalidEncapsulationLen(encapsulation.len()));
+        }
+        buf.copy_from_slice(encapsulation);
+
+        Ok(buf)
+    }
+
+    fn export_encapsulation(encapsulation: &Self::Encapsulation) -> &[u8] {
+        encapsulation
     }
 
     fn export_shared_secret(shared_secret: &Self::SharedSecret) -> &[u8] {
@@ -90,11 +123,14 @@ impl KeyExchangeCryptosystem for X25519Cryptosystem {
     }
 }
 
-/// Errors that can occur when importing X25519 keys.
+/// An invalid X25519 key length error.
 #[derive(Error, Debug)]
-pub enum X25519IoError {
-    #[error("invalid key length: {0}")]
-    InvalidKeyLen(usize),
-}
+#[error("invalid key length: {0}")]
+pub struct InvalidKeyLen(usize);
 
-key_exchange_cryptosystem_tests!(super::X25519Cryptosystem);
+/// An invalid X25519 encapsulation length error.
+#[derive(Error, Debug)]
+#[error("invalid encapsulation length: {0}")]
+pub struct InvalidEncapsulationLen(usize);
+
+key_encapsulation_cryptosystem_tests!(super::X25519Cryptosystem);
