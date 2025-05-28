@@ -2,6 +2,8 @@
 mod chacha20_poly1305;
 #[cfg(feature = "default-ed25519")]
 mod ed25519;
+#[cfg(feature = "default-kyber")]
+mod kyber;
 #[cfg(feature = "default-x25519")]
 mod x25519;
 
@@ -9,5 +11,7 @@ mod x25519;
 pub use chacha20_poly1305::*;
 #[cfg(feature = "default-ed25519")]
 pub use ed25519::*;
+// #[cfg(feature = "default-kyber")]
+// pub use kyber::*;
 #[cfg(feature = "default-x25519")]
 pub use x25519::*;
