@@ -4,7 +4,7 @@ use crate::{
     cryptosystem::{PublicKeyCryptosystem, SigningCryptosystem},
     PublicKey,
 };
-use crate::{CryptoError, SharedSecret, Signature};
+use crate::{CryptoError, Encapsulation, SharedSecret, Signature};
 #[cfg(feature = "serde")]
 use serde::Serialize;
 
@@ -87,9 +87,9 @@ impl<C: KeyEncapsulationCryptosystem> SecretKey<C> {
     /// and sent the encapsulation using our public key).
     pub fn decapsulate(
         &self,
-        encapsulation: &C::Encapsulation,
+        encapsulation: &Encapsulation<C>,
     ) -> Result<SharedSecret<C>, C::Error> {
-        let raw = C::decapsulate(encapsulation, &self.key)?;
+        let raw = C::decapsulate(&encapsulation.inner, &self.key)?;
         Ok(SharedSecret { shared_secret: raw })
     }
 }
