@@ -3,7 +3,7 @@ use chacha20poly1305::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
     Key, XChaCha20Poly1305,
 };
-use std::convert::Infallible;
+use std::{borrow::Cow, convert::Infallible};
 use thiserror::Error;
 
 pub type C7P7Cryptosystem = ChaCha20Poly1305Cryptosystem;
@@ -40,8 +40,8 @@ impl SymmetricCryptosystem for ChaCha20Poly1305Cryptosystem {
             .map_err(|_| ChaCha20Poly1305Error::DecryptionFailed)?;
         Ok(plaintext_bytes)
     }
-    fn export_key(key: &Self::Key) -> &[u8] {
-        key.as_ref()
+    fn export_key(key: &Self::Key) -> Cow<'_, [u8]> {
+        Cow::Borrowed(key.as_ref())
     }
     fn import_key(key: &[u8]) -> Result<Self::Key, Self::IoError> {
         // Infallible, symmetric keys for ChaCha are just raw bytes with no particular structure

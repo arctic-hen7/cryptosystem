@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::{
     key_encapsulation_cryptosystem_tests, KeyEncapsulationCryptosystem, PublicKeyCryptosystem,
 };
@@ -24,8 +26,8 @@ impl PublicKeyCryptosystem for X25519Cryptosystem {
         (public_key, secret_key)
     }
 
-    fn export_public_key_raw(key: &Self::PublicKey) -> &[u8] {
-        key.as_bytes()
+    fn export_public_key_raw(key: &Self::PublicKey) -> Cow<'_, [u8]> {
+        Cow::Borrowed(key.as_bytes())
     }
     fn import_public_key_raw(key: &[u8]) -> Result<Self::PublicKey, Self::IoError> {
         let mut buf = [0u8; 32];
@@ -49,8 +51,8 @@ impl PublicKeyCryptosystem for X25519Cryptosystem {
     // NOTE: Exporting secret keys is not recommended, as using ephemeral keys for key exchange is
     // *much* more secure.
 
-    fn export_secret_key_raw(key: &Self::SecretKey) -> &[u8] {
-        key.as_bytes()
+    fn export_secret_key_raw(key: &Self::SecretKey) -> Cow<'_, [u8]> {
+        Cow::Borrowed(key.as_bytes())
     }
     fn import_secret_key_raw(key: &[u8]) -> Result<Self::SecretKey, Self::IoError> {
         let mut buf = [0u8; 32];
@@ -114,12 +116,12 @@ impl KeyEncapsulationCryptosystem for X25519Cryptosystem {
         Ok(buf)
     }
 
-    fn export_encapsulation(encapsulation: &Self::Encapsulation) -> &[u8] {
-        encapsulation
+    fn export_encapsulation(encapsulation: &Self::Encapsulation) -> Cow<'_, [u8]> {
+        Cow::Borrowed(encapsulation)
     }
 
-    fn export_shared_secret(shared_secret: &Self::SharedSecret) -> &[u8] {
-        shared_secret
+    fn export_shared_secret(shared_secret: &Self::SharedSecret) -> Cow<'_, [u8]> {
+        Cow::Borrowed(shared_secret)
     }
 }
 

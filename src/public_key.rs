@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::crypto_io::{CryptoDerExport, CryptoDerImport, CryptoExport, CryptoImport};
 use crate::shared_secret::Encapsulation;
 use crate::{
@@ -27,7 +29,7 @@ impl<C: PublicKeyCryptosystem> CryptoImport for PublicKey<C> {
     }
 }
 impl<C: PublicKeyCryptosystem> CryptoExport for PublicKey<C> {
-    fn to_bytes(&self) -> &[u8] {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
         C::export_public_key_raw(&self.key)
     }
 }

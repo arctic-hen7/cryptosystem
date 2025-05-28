@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use super::{InvalidEncapsulationLen, InvalidKeyLen};
 use crate::{
     key_encapsulation_cryptosystem_tests, KeyEncapsulationCryptosystem, PublicKeyCryptosystem,
@@ -60,8 +62,8 @@ impl PublicKeyCryptosystem for KyberCryptosystem {
         )
     }
 
-    fn export_public_key_raw(key: &Self::PublicKey) -> &[u8] {
-        &key.bytes
+    fn export_public_key_raw(key: &Self::PublicKey) -> Cow<'_, [u8]> {
+        Cow::Borrowed(&key.bytes)
     }
     fn import_public_key_raw(key: &[u8]) -> Result<Self::PublicKey, Self::IoError> {
         let mut buf = [0u8; PUBLIC_KEY_LEN];
@@ -85,8 +87,8 @@ impl PublicKeyCryptosystem for KyberCryptosystem {
         todo!("der support not yet implemented for kyber")
     }
 
-    fn export_secret_key_raw(key: &Self::SecretKey) -> &[u8] {
-        &key.bytes
+    fn export_secret_key_raw(key: &Self::SecretKey) -> Cow<'_, [u8]> {
+        Cow::Borrowed(&key.bytes)
     }
     fn import_secret_key_raw(key: &[u8]) -> Result<Self::SecretKey, Self::IoError> {
         let mut buf = [0u8; SECRET_KEY_LEN];
@@ -151,12 +153,12 @@ impl KeyEncapsulationCryptosystem for KyberCryptosystem {
         Ok(buf)
     }
 
-    fn export_encapsulation(encapsulation: &Self::Encapsulation) -> &[u8] {
-        encapsulation
+    fn export_encapsulation(encapsulation: &Self::Encapsulation) -> Cow<'_, [u8]> {
+        Cow::Borrowed(encapsulation)
     }
 
-    fn export_shared_secret(shared_secret: &Self::SharedSecret) -> &[u8] {
-        shared_secret
+    fn export_shared_secret(shared_secret: &Self::SharedSecret) -> Cow<'_, [u8]> {
+        Cow::Borrowed(shared_secret)
     }
 }
 

@@ -121,7 +121,7 @@ pub mod bytes {
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
         let bytes = val.to_bytes();
-        serializer.serialize_bytes(bytes)
+        serializer.serialize_bytes(&bytes)
     }
     pub fn deserialize<'de, T: CryptoImport, D: Deserializer<'de>>(
         deserializer: D,

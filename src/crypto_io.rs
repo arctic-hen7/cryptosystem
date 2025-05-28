@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 #[cfg(feature = "base64")]
 use crate::error::FromBase64Error;
 #[cfg(feature = "hex")]
@@ -56,7 +58,7 @@ pub trait CryptoExport {
     ///
     /// For types that also implement [`CryptoDerIo`], this will be the *raw* bytes, not the
     /// DER-encoded bytes!
-    fn to_bytes(&self) -> &[u8];
+    fn to_bytes(&self) -> Cow<'_, [u8]>;
 
     /// Exports this cryptographic value to a hex-encoded string.
     ///
@@ -77,7 +79,7 @@ pub trait CryptoExport {
         use crate::base64_utils::bytes_to_base64;
 
         let bytes = self.to_bytes();
-        bytes_to_base64(bytes, url_safe)
+        bytes_to_base64(&bytes, url_safe)
     }
 }
 

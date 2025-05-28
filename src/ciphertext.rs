@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::crypto_io::{CryptoExport, CryptoImport};
 
 /// Ciphertext resulting from some kind of encryption. This is a wrapper over the raw bytes of the
@@ -19,8 +21,8 @@ impl CryptoImport for Ciphertext {
     }
 }
 impl CryptoExport for Ciphertext {
-    fn to_bytes(&self) -> &[u8] {
-        &self.inner
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
+        Cow::Borrowed(&self.inner)
     }
 }
 impl From<Vec<u8>> for Ciphertext {

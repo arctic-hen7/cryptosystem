@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::{
     cryptosystem::{PublicKeyCryptosystem, SigningCryptosystem},
     signing_cryptosystem_tests,
@@ -21,8 +23,8 @@ impl PublicKeyCryptosystem for Ed25519Cryptosystem {
         (verifying_key, signing_key)
     }
 
-    fn export_public_key_raw(key: &Self::PublicKey) -> &[u8] {
-        key.as_bytes()
+    fn export_public_key_raw(key: &Self::PublicKey) -> Cow<'_, [u8]> {
+        Cow::Borrowed(key.as_bytes())
     }
     fn import_public_key_raw(key: &[u8]) -> Result<Self::PublicKey, Self::IoError> {
         let mut buf = [0u8; 32];
@@ -49,8 +51,8 @@ impl PublicKeyCryptosystem for Ed25519Cryptosystem {
         Ok(VerifyingKey::from_public_key_der(key)?)
     }
 
-    fn export_secret_key_raw(key: &Self::SecretKey) -> &[u8] {
-        key.as_bytes()
+    fn export_secret_key_raw(key: &Self::SecretKey) -> Cow<'_, [u8]> {
+        Cow::Borrowed(key.as_bytes())
     }
     fn import_secret_key_raw(key: &[u8]) -> Result<Self::SecretKey, Self::IoError> {
         let mut buf = [0u8; 32];
@@ -99,8 +101,8 @@ impl SigningCryptosystem for Ed25519Cryptosystem {
         // TODO: Should we be using `verify_strict` here? Malleability issues...
         key.verify(msg, &signature)
     }
-    fn export_signature(signature: &Self::Signature) -> &[u8] {
-        signature.as_ref()
+    fn export_signature(signature: &Self::Signature) -> Cow<'_, [u8]> {
+        Cow::Borrowed(signature.as_ref())
     }
     fn import_signature(
         signature: &[u8],

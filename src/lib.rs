@@ -2,6 +2,7 @@ mod auto_tests;
 #[cfg(feature = "base64")]
 mod base64_utils;
 mod ciphertext;
+mod composites;
 mod crypto_io;
 mod cryptosystem;
 mod defaults;
@@ -28,4 +29,5 @@ pub use crate::shared_secret::{Encapsulation, SharedSecret};
 pub use crate::signature::Signature;
 pub use crate::symmetric_key::SymmetricKey;
 
+pub use crate::composites::*;
 pub use crate::defaults::*;

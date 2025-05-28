@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 #[cfg(feature = "serde")]
 use crate::error::CryptoError;
 use crate::{
@@ -21,7 +23,7 @@ impl<C: SymmetricCryptosystem> CryptoImport for SymmetricKey<C> {
     }
 }
 impl<C: SymmetricCryptosystem> CryptoExport for SymmetricKey<C> {
-    fn to_bytes(&self) -> &[u8] {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
         C::export_key(&self.key)
     }
 }
@@ -39,7 +41,7 @@ impl<C: SymmetricCryptosystem> SymmetricKey<C> {
     }
     /// Decrypts the given ciphertext bytes, returning the bytes of the plaintext.
     pub fn decrypt_bytes(&self, ciphertext: &Ciphertext) -> Result<Vec<u8>, C::Error> {
-        C::decrypt(ciphertext.to_bytes(), &self.key)
+        C::decrypt(&ciphertext.to_bytes(), &self.key)
     }
 
     /// Encrypts the given message, returning the bytes of the ciphertext, but first serializing

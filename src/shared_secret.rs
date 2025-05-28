@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::crypto_io::CryptoExport;
 use crate::cryptosystem::KeyEncapsulationCryptosystem;
 use crate::CryptoImport;
@@ -13,7 +15,7 @@ pub struct SharedSecret<C: KeyEncapsulationCryptosystem> {
     pub(crate) shared_secret: C::SharedSecret,
 }
 impl<C: KeyEncapsulationCryptosystem> CryptoExport for SharedSecret<C> {
-    fn to_bytes(&self) -> &[u8] {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
         C::export_shared_secret(&self.shared_secret)
     }
 }
@@ -36,7 +38,7 @@ impl<C: KeyEncapsulationCryptosystem> CryptoImport for Encapsulation<C> {
     }
 }
 impl<C: KeyEncapsulationCryptosystem> CryptoExport for Encapsulation<C> {
-    fn to_bytes(&self) -> &[u8] {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
         C::export_encapsulation(&self.inner)
     }
 }

@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 /// A trait for a collection of cryptographic primitives for symmetric encryption (i.e. encrypting
 /// and decrypting with the same key, which is shared between parties).
 pub trait SymmetricCryptosystem: Clone + Copy + Send + Sync {
@@ -18,7 +20,7 @@ pub trait SymmetricCryptosystem: Clone + Copy + Send + Sync {
     fn decrypt(ciphertext: &[u8], key: &Self::Key) -> Result<Vec<u8>, Self::Error>;
 
     /// Exports the given symmetric key to raw bytes, without any special formatting.
-    fn export_key(key: &Self::Key) -> &[u8];
+    fn export_key(key: &Self::Key) -> Cow<'_, [u8]>;
     /// Imports a key from the given raw byte slice.
     fn import_key(key: &[u8]) -> Result<Self::Key, Self::IoError>;
 }
@@ -45,7 +47,7 @@ pub trait SigningCryptosystem: PublicKeyCryptosystem + Clone + Copy {
     ) -> Result<(), Self::Error>;
 
     /// Exports the given signature to raw bytes, without any special formatting.
-    fn export_signature(signature: &Self::Signature) -> &[u8];
+    fn export_signature(signature: &Self::Signature) -> Cow<'_, [u8]>;
     /// Imports a signature from the given raw byte slice.
     fn import_signature(
         signature: &[u8],
@@ -72,7 +74,7 @@ pub trait SigningCryptosystem: PublicKeyCryptosystem + Clone + Copy {
 //
 //     /// Exports the given shared secret to raw bytes, without any additional formatting. It is
 //     /// assumed that this will never need to be imported again.
-//     fn export_shared_secret(shared_secret: &Self::SharedSecret) -> &[u8];
+//     fn export_shared_secret(shared_secret: &Self::SharedSecret) -> Cow<'_, [u8]>;
 // }
 
 /// A trait for a collection of key encapsulation primitives that allow a public key to be used to
@@ -116,11 +118,11 @@ pub trait KeyEncapsulationCryptosystem: PublicKeyCryptosystem + Clone + Copy {
     ) -> Result<Self::Encapsulation, <Self as KeyEncapsulationCryptosystem>::IoError>;
 
     /// Exports the given encapsulation to raw bytes, without any additional formatting.
-    fn export_encapsulation(encapsulation: &Self::Encapsulation) -> &[u8];
+    fn export_encapsulation(encapsulation: &Self::Encapsulation) -> Cow<'_, [u8]>;
 
     /// Exports the given shared secret to raw bytes, without any additional formatting. It is
     /// assumed that this will never need to be imported again.
-    fn export_shared_secret(shared_secret: &Self::SharedSecret) -> &[u8];
+    fn export_shared_secret(shared_secret: &Self::SharedSecret) -> Cow<'_, [u8]>;
 }
 
 /// A trait for a collection of asymmetric cryptographic primitives. This trait by itself does not
@@ -139,7 +141,7 @@ pub trait PublicKeyCryptosystem: Clone + Copy {
     fn generate_keypair() -> (Self::PublicKey, Self::SecretKey);
 
     /// Exports the given public key to *raw* bytes, without any additional formatting.
-    fn export_public_key_raw(key: &Self::PublicKey) -> &[u8];
+    fn export_public_key_raw(key: &Self::PublicKey) -> Cow<'_, [u8]>;
     /// Imports a public key from the given *raw* byte slice.
     fn import_public_key_raw(key: &[u8]) -> Result<Self::PublicKey, Self::IoError>;
 
@@ -151,7 +153,7 @@ pub trait PublicKeyCryptosystem: Clone + Copy {
     fn import_public_key_der(key: &[u8]) -> Result<Self::PublicKey, Self::IoError>;
 
     /// Exports the given secret key to *raw* bytes, without any additional formatting.
-    fn export_secret_key_raw(key: &Self::SecretKey) -> &[u8];
+    fn export_secret_key_raw(key: &Self::SecretKey) -> Cow<'_, [u8]>;
     /// Imports a secret key from the given *raw* byte slice.
     fn import_secret_key_raw(key: &[u8]) -> Result<Self::SecretKey, Self::IoError>;
 

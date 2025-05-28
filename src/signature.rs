@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::crypto_io::{CryptoExport, CryptoImport};
 use crate::cryptosystem::SigningCryptosystem;
 
@@ -17,7 +19,7 @@ impl<C: SigningCryptosystem> CryptoImport for Signature<C> {
     }
 }
 impl<C: SigningCryptosystem> CryptoExport for Signature<C> {
-    fn to_bytes(&self) -> &[u8] {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
         C::export_signature(&self.signature)
     }
 }
