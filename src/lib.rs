@@ -24,7 +24,7 @@ pub use crate::cryptosystem::{
 pub use crate::error::*;
 pub use crate::public_key::PublicKey;
 pub use crate::secret_key::SecretKey;
-pub use crate::shared_secret::SharedSecret;
+pub use crate::shared_secret::{Encapsulation, SharedSecret};
 pub use crate::signature::Signature;
 pub use crate::symmetric_key::SymmetricKey;
 
