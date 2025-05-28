@@ -126,11 +126,11 @@ impl KeyEncapsulationCryptosystem for X25519Cryptosystem {
 /// An invalid X25519 key length error.
 #[derive(Error, Debug)]
 #[error("invalid key length: {0}")]
-pub struct InvalidKeyLen(usize);
+pub struct InvalidKeyLen(pub usize);
 
 /// An invalid X25519 encapsulation length error.
 #[derive(Error, Debug)]
 #[error("invalid encapsulation length: {0}")]
-pub struct InvalidEncapsulationLen(usize);
+pub struct InvalidEncapsulationLen(pub usize);
 
 key_encapsulation_cryptosystem_tests!(super::X25519Cryptosystem);

@@ -1,3 +1,4 @@
+use super::{InvalidEncapsulationLen, InvalidKeyLen};
 use crate::{
     key_encapsulation_cryptosystem_tests, KeyEncapsulationCryptosystem, PublicKeyCryptosystem,
 };
@@ -6,7 +7,6 @@ use ml_kem::{
     EncodedSizeUser, KemCore, MlKem1024, MlKem1024Params,
 };
 use rand::rngs::OsRng;
-use thiserror::Error;
 
 // Yeah...
 const PUBLIC_KEY_LEN: usize = 1568;
@@ -159,15 +159,5 @@ impl KeyEncapsulationCryptosystem for KyberCryptosystem {
         shared_secret
     }
 }
-
-/// An invalid X25519 key length error.
-#[derive(Error, Debug)]
-#[error("invalid key length: {0}")]
-pub struct InvalidKeyLen(usize);
-
-/// An invalid X25519 encapsulation length error.
-#[derive(Error, Debug)]
-#[error("invalid encapsulation length: {0}")]
-pub struct InvalidEncapsulationLen(usize);
 
 key_encapsulation_cryptosystem_tests!(super::KyberCryptosystem);
