@@ -6,26 +6,26 @@ use crate::{
 };
 use ml_kem::{
     kem::{Decapsulate, DecapsulationKey, Encapsulate, EncapsulationKey},
-    EncodedSizeUser, KemCore, MlKem1024, MlKem1024Params,
+    EncodedSizeUser, KemCore, MlKem512, MlKem512Params,
 };
 use rand::rngs::OsRng;
 
 // Yeah...
-const PUBLIC_KEY_LEN: usize = 1568;
-const SECRET_KEY_LEN: usize = 3168;
-const ENCAPSULATION_LEN: usize = 1568;
+const PUBLIC_KEY_LEN: usize = 800;
+const SECRET_KEY_LEN: usize = 1632;
+const ENCAPSULATION_LEN: usize = 768;
 
 /// A Kyber public key (you should work with these through [`crate::PublicKey`]).
 #[derive(Clone)]
 pub struct KyberPublicKey {
-    pub(crate) inner: EncapsulationKey<MlKem1024Params>,
+    pub(crate) inner: EncapsulationKey<MlKem512Params>,
     pub(crate) bytes: [u8; PUBLIC_KEY_LEN],
 }
 
 /// A Kyber secret key (you should work with these through [`crate::SecretKey`]).
 #[derive(Clone)]
 pub struct KyberSecretKey {
-    pub(crate) inner: DecapsulationKey<MlKem1024Params>,
+    pub(crate) inner: DecapsulationKey<MlKem512Params>,
     pub(crate) bytes: [u8; SECRET_KEY_LEN],
 }
 
@@ -44,7 +44,7 @@ impl PublicKeyCryptosystem for KyberCryptosystem {
     type IoError = InvalidKeyLen;
 
     fn generate_keypair() -> (Self::PublicKey, Self::SecretKey) {
-        let (dk, ek) = MlKem1024::generate(&mut OsRng);
+        let (dk, ek) = MlKem512::generate(&mut OsRng);
         // NOTE: Key lengths are implicitly type-checked here
         let ek_bytes = ek.as_bytes().into();
         let dk_bytes = dk.as_bytes().into();
