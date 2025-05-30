@@ -1,11 +1,10 @@
-use std::borrow::Cow;
-
 #[cfg(feature = "base64")]
 use crate::error::FromBase64Error;
 #[cfg(feature = "hex")]
 use crate::error::FromHexError;
 #[cfg(feature = "pem")]
 use crate::error::FromPemError;
+use std::borrow::Cow;
 
 /// A trait for cryptographic values that can be imported from a variety of formats, based on their
 /// raw byte encodings. The formats available depend on the feature flags (currently `hex` and
@@ -15,7 +14,7 @@ pub trait CryptoImport {
 
     /// Imports this cryptographic value from the given bytes.
     ///
-    /// For types that also implement [`CryptoDerIo`], this expects the *raw* bytes, not the
+    /// For types that also implement [`CryptoDerImport`], this expects the *raw* bytes, not the
     /// DER-encoded bytes!
     fn from_bytes(bytes: &[u8]) -> Result<Self, Self::Error>
     where
@@ -23,7 +22,7 @@ pub trait CryptoImport {
 
     /// Imports this cryptographic value from the given hex-encoded string.
     ///
-    /// For types that also implement [`CryptoDerIo`], this expects a hex encoding of the *raw*
+    /// For types that also implement [`CryptoDerImport`], this expects a hex encoding of the *raw*
     /// bytes, *not* the DER-encoded bytes!
     #[cfg(feature = "hex")]
     fn from_hex(hex: &str) -> Result<Self, FromHexError<Self::Error>>
@@ -36,8 +35,8 @@ pub trait CryptoImport {
 
     /// Imports this cryptographic value from the given base64-encoded string.
     ///
-    /// For types that also implement [`CryptoDerIo`], this expects a base64 encoding of the *raw*
-    /// bytes, *not* the DER-encoded bytes!
+    /// For types that also implement [`CryptoDerImport`], this expects a base64 encoding of the
+    /// *raw* bytes, *not* the DER-encoded bytes!
     #[cfg(feature = "base64")]
     fn from_base64(base64: &str, url_safe: bool) -> Result<Self, FromBase64Error<Self::Error>>
     where
@@ -56,13 +55,13 @@ pub trait CryptoImport {
 pub trait CryptoExport {
     /// Exports this cryptographic value to bytes.
     ///
-    /// For types that also implement [`CryptoDerIo`], this will be the *raw* bytes, not the
+    /// For types that also implement [`CryptoDerExport`], this will be the *raw* bytes, not the
     /// DER-encoded bytes!
     fn to_bytes(&self) -> Cow<'_, [u8]>;
 
     /// Exports this cryptographic value to a hex-encoded string.
     ///
-    /// For types that also implement [`CryptoDerIo`], this will be a hex encoding of the *raw*
+    /// For types that also implement [`CryptoDerExport`], this will be a hex encoding of the *raw*
     /// bytes, *not* the DER-encoded bytes!
     #[cfg(feature = "hex")]
     fn to_hex(&self) -> String {
@@ -72,8 +71,8 @@ pub trait CryptoExport {
 
     /// Exports this cryptographic value to a base64-encoded string.
     ///
-    /// For types that also implement [`CryptoDerIo`], this will be a base64 encoding of the *raw*
-    /// bytes, *not* the DER-encoded bytes!
+    /// For types that also implement [`CryptoDerExport`], this will be a base64 encoding of the
+    /// *raw* bytes, *not* the DER-encoded bytes!
     #[cfg(feature = "base64")]
     fn to_base64(&self, url_safe: bool) -> String {
         use crate::base64_utils::bytes_to_base64;
