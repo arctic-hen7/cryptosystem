@@ -1,8 +1,15 @@
+// #![cfg_attr(not(feature = "std"), no_std)]
+#![warn(
+    clippy::std_instead_of_core,
+    clippy::std_instead_of_alloc,
+    clippy::alloc_instead_of_core
+)]
+
 mod auto_tests;
 #[cfg(feature = "base64")]
 mod base64_utils;
-mod ciphertext;
 mod composites;
+mod crypto_array;
 mod crypto_io;
 mod cryptosystem;
 mod defaults;
@@ -15,9 +22,9 @@ mod secret_key;
 pub mod serde;
 mod shared_secret;
 mod signature;
+mod sizes;
 mod symmetric_key;
 
-pub use crate::ciphertext::Ciphertext;
 pub use crate::crypto_io::*;
 pub use crate::cryptosystem::{
     KeyEncapsulationCryptosystem, PublicKeyCryptosystem, SigningCryptosystem, SymmetricCryptosystem,

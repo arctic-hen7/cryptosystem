@@ -1,8 +1,7 @@
-use std::borrow::Cow;
-
 use crate::crypto_io::CryptoExport;
 use crate::cryptosystem::KeyEncapsulationCryptosystem;
 use crate::CryptoImport;
+use std::borrow::Cow;
 
 /// A shared secret, produced by by encapsulating to the public key of a recipient (e.g. a server).
 /// The sender immediately has the shared secret, and the recipient can decapsulate what was sent
@@ -15,7 +14,9 @@ pub struct SharedSecret<C: KeyEncapsulationCryptosystem> {
     pub(crate) shared_secret: C::SharedSecret,
 }
 impl<C: KeyEncapsulationCryptosystem> CryptoExport for SharedSecret<C> {
-    fn to_bytes(&self) -> Cow<'_, [u8]> {
+    type Output = C::SharedSecretBytes;
+
+    fn to_bytes(&self) -> Cow<'_, Self::Output> {
         C::export_shared_secret(&self.shared_secret)
     }
 }
@@ -31,14 +32,17 @@ pub struct Encapsulation<C: KeyEncapsulationCryptosystem> {
     pub(crate) inner: C::Encapsulation,
 }
 impl<C: KeyEncapsulationCryptosystem> CryptoImport for Encapsulation<C> {
+    type Bytes = C::EncapsulationBytes;
     type Error = <C as KeyEncapsulationCryptosystem>::IoError;
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Self::Error> {
+    fn from_bytes_exact(bytes: &Self::Bytes) -> Result<Self, Self::Error> {
         C::import_encapsulation(bytes).map(|inner| Self { inner })
     }
 }
 impl<C: KeyEncapsulationCryptosystem> CryptoExport for Encapsulation<C> {
-    fn to_bytes(&self) -> Cow<'_, [u8]> {
+    type Output = C::EncapsulationBytes;
+
+    fn to_bytes(&self) -> Cow<'_, Self::Output> {
         C::export_encapsulation(&self.inner)
     }
 }

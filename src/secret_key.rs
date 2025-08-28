@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use crate::crypto_io::{CryptoDerExport, CryptoDerImport, CryptoExport, CryptoImport};
 use crate::cryptosystem::KeyEncapsulationCryptosystem;
 use crate::{
@@ -9,6 +7,7 @@ use crate::{
 use crate::{CryptoError, Encapsulation, SharedSecret, Signature};
 #[cfg(feature = "serde")]
 use serde::Serialize;
+use std::borrow::Cow;
 
 /// A secret key, which should be kept secret by some party to either decrypt messages encrypted by
 /// others for them with their public key, or to create signatures on messages that will be
@@ -21,14 +20,17 @@ pub struct SecretKey<C: PublicKeyCryptosystem> {
     key: C::SecretKey,
 }
 impl<C: PublicKeyCryptosystem> CryptoImport for SecretKey<C> {
+    type Bytes = C::SecretKeyBytes;
     type Error = C::IoError;
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Self::Error> {
+    fn from_bytes_exact(bytes: &Self::Bytes) -> Result<Self, Self::Error> {
         C::import_secret_key_raw(bytes).map(|key| Self { key })
     }
 }
 impl<C: PublicKeyCryptosystem> CryptoExport for SecretKey<C> {
-    fn to_bytes(&self) -> Cow<'_, [u8]> {
+    type Output = C::SecretKeyBytes;
+
+    fn to_bytes(&self) -> Cow<'_, Self::Output> {
         C::export_secret_key_raw(&self.key)
     }
 }

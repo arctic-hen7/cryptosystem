@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use crate::crypto_io::{CryptoDerExport, CryptoDerImport, CryptoExport, CryptoImport};
 use crate::shared_secret::Encapsulation;
 use crate::{
@@ -9,6 +7,7 @@ use crate::{
 use crate::{CryptoError, KeyEncapsulationCryptosystem, SharedSecret};
 #[cfg(feature = "serde")]
 use serde::Serialize;
+use std::borrow::Cow;
 
 /// A public key, which can be shared with the world to either encrypt messages to the holder of
 /// the secret key, or to verify signatures which they have created. The capabilities of this key
@@ -22,14 +21,17 @@ pub struct PublicKey<C: PublicKeyCryptosystem> {
 }
 
 impl<C: PublicKeyCryptosystem> CryptoImport for PublicKey<C> {
+    type Bytes = C::PublicKeyBytes;
     type Error = C::IoError;
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Self::Error> {
+    fn from_bytes_exact(bytes: &Self::Bytes) -> Result<Self, Self::Error> {
         C::import_public_key_raw(bytes).map(|key| Self { key })
     }
 }
 impl<C: PublicKeyCryptosystem> CryptoExport for PublicKey<C> {
-    fn to_bytes(&self) -> Cow<'_, [u8]> {
+    type Output = C::PublicKeyBytes;
+
+    fn to_bytes(&self) -> Cow<'_, Self::Output> {
         C::export_public_key_raw(&self.key)
     }
 }

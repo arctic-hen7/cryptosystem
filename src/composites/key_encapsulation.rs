@@ -1,5 +1,7 @@
-use super::{CompositeCryptosystem, CompositeError, CompositeIoError};
-use crate::KeyEncapsulationCryptosystem;
+use super::{
+    export_combination, import_combination, CompositeCryptosystem, CompositeError, CompositeIoError,
+};
+use crate::{crypto_array::CryptoArraySum, KeyEncapsulationCryptosystem};
 use std::borrow::Cow;
 
 const KDF_CONTEXT: &str = "cryptosystem::composites::key_encapsulation kdf";
@@ -7,8 +9,12 @@ const KDF_CONTEXT: &str = "cryptosystem::composites::key_encapsulation kdf";
 impl<E1: KeyEncapsulationCryptosystem, E2: KeyEncapsulationCryptosystem>
     KeyEncapsulationCryptosystem for CompositeCryptosystem<E1, E2>
 {
+    // Shared secrets are KDFed into one 32-byte key
     type SharedSecret = [u8; 32];
+    type SharedSecretBytes = Self::SharedSecret;
+    // But encapsulations we need to combine
     type Encapsulation = (E1::Encapsulation, E2::Encapsulation);
+    type EncapsulationBytes = CryptoArraySum<E1::EncapsulationBytes, E2::EncapsulationBytes>;
     type Error = CompositeError<
         <E1 as KeyEncapsulationCryptosystem>::Error,
         <E2 as KeyEncapsulationCryptosystem>::Error,
@@ -27,8 +33,8 @@ impl<E1: KeyEncapsulationCryptosystem, E2: KeyEncapsulationCryptosystem>
         let secret = blake3::derive_key(
             KDF_CONTEXT,
             &[
-                &E1::export_shared_secret(&secret_1)[..],
-                &E2::export_shared_secret(&secret_2)[..],
+                E1::export_shared_secret(&secret_1).as_ref().as_ref(),
+                E2::export_shared_secret(&secret_2).as_ref().as_ref(),
             ]
             .concat(),
         );
@@ -48,8 +54,8 @@ impl<E1: KeyEncapsulationCryptosystem, E2: KeyEncapsulationCryptosystem>
         let secret = blake3::derive_key(
             KDF_CONTEXT,
             &[
-                &E1::export_shared_secret(&secret1)[..],
-                &E2::export_shared_secret(&secret2)[..],
+                E1::export_shared_secret(&secret1).as_ref().as_ref(),
+                E2::export_shared_secret(&secret2).as_ref().as_ref(),
             ]
             .concat(),
         );
@@ -58,39 +64,28 @@ impl<E1: KeyEncapsulationCryptosystem, E2: KeyEncapsulationCryptosystem>
     }
 
     fn import_encapsulation(
-        encapsulation: &[u8],
+        buf: &Self::EncapsulationBytes,
     ) -> Result<Self::Encapsulation, <Self as KeyEncapsulationCryptosystem>::IoError> {
-        if encapsulation.len() < 4 {
-            return Err(CompositeIoError::TooShort);
-        }
+        let (encap_1_bytes, encap_2_bytes) = import_combination(buf)?;
 
-        let key_1_len = u32::from_be_bytes(encapsulation[0..4].try_into().unwrap()) as usize;
-        if encapsulation.len() < 4 + key_1_len {
-            return Err(CompositeIoError::TooShort);
-        }
+        let encap_1 = E1::import_encapsulation(&encap_1_bytes).map_err(CompositeIoError::A)?;
+        let encap_2 = E2::import_encapsulation(&encap_2_bytes).map_err(CompositeIoError::B)?;
 
-        let key_1 = E1::import_encapsulation(&encapsulation[4..4 + key_1_len])
-            .map_err(CompositeIoError::A)?;
-        let key_2 = E2::import_encapsulation(&encapsulation[4 + key_1_len..])
-            .map_err(CompositeIoError::B)?;
-
-        Ok((key_1, key_2))
+        Ok((encap_1, encap_2))
     }
 
-    fn export_encapsulation(encapsulation: &Self::Encapsulation) -> Cow<'_, [u8]> {
+    fn export_encapsulation(
+        encapsulation: &Self::Encapsulation,
+    ) -> Cow<'_, Self::EncapsulationBytes> {
         let encap_1 = E1::export_encapsulation(&encapsulation.0);
         let encap_2 = E2::export_encapsulation(&encapsulation.1);
 
-        // Encode both into a buffer, declaring the first encap's length
-        let mut buf = Vec::with_capacity(4 + encap_1.len() + encap_2.len());
-        buf.extend_from_slice(&(encap_1.len() as u32).to_be_bytes());
-        buf.extend_from_slice(&encap_1);
-        buf.extend_from_slice(&encap_2);
-
-        Cow::Owned(buf)
+        Cow::Owned(export_combination(encap_1.as_ref(), encap_2.as_ref()))
     }
 
-    fn export_shared_secret(shared_secret: &Self::SharedSecret) -> Cow<'_, [u8]> {
+    fn export_shared_secret(
+        shared_secret: &Self::SharedSecret,
+    ) -> Cow<'_, Self::SharedSecretBytes> {
         Cow::Borrowed(shared_secret)
     }
 }

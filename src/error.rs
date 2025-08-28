@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::SizedIoError;
+
 /// A cryptography error, which is generic over a cryptosystem's own unique error type.
 #[derive(Error, Debug)]
 pub enum CryptoError<E: std::error::Error> {
@@ -29,7 +31,7 @@ pub enum FromBase64Error<E: std::error::Error> {
     #[error("failed to convert base64 into bytes")]
     DecodeError(#[source] base64::DecodeError),
     #[error("failed to convert bytes into type")]
-    ConvertError(#[from] E),
+    ConvertError(#[from] SizedIoError<E>),
 }
 
 /// Errors that can occur in converting hex strings to types.
@@ -39,7 +41,7 @@ pub enum FromHexError<E: std::error::Error> {
     #[error("failed to convert hex into bytes")]
     DecodeError(#[source] hex::FromHexError),
     #[error("failed to convert bytes into type")]
-    ConvertError(#[from] E),
+    ConvertError(#[from] SizedIoError<E>),
 }
 
 /// Errors that can occur in converting PEM strings into keys.
@@ -51,5 +53,5 @@ pub enum FromPemError<E: std::error::Error> {
     #[error("failed to convert pem into bytes")]
     DecodeError(#[source] base64::DecodeError),
     #[error("failed to convert bytes into type")]
-    ConvertError(#[from] E),
+    ConvertError(#[from] SizedIoError<E>),
 }

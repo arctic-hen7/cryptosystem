@@ -1,9 +1,8 @@
-use std::borrow::Cow;
-
 use crate::{
     key_encapsulation_cryptosystem_tests, KeyEncapsulationCryptosystem, PublicKeyCryptosystem,
 };
 use rand::rngs::OsRng;
+use std::borrow::Cow;
 use thiserror::Error;
 use x25519_dalek::{PublicKey, StaticSecret};
 
@@ -16,7 +15,9 @@ use x25519_dalek::{PublicKey, StaticSecret};
 pub struct X25519Cryptosystem;
 impl PublicKeyCryptosystem for X25519Cryptosystem {
     type PublicKey = PublicKey;
+    type PublicKeyBytes = [u8; 32];
     type SecretKey = StaticSecret;
+    type SecretKeyBytes = [u8; 32];
     type IoError = InvalidKeyLen;
 
     fn generate_keypair() -> (Self::PublicKey, Self::SecretKey) {
@@ -26,17 +27,11 @@ impl PublicKeyCryptosystem for X25519Cryptosystem {
         (public_key, secret_key)
     }
 
-    fn export_public_key_raw(key: &Self::PublicKey) -> Cow<'_, [u8]> {
+    fn export_public_key_raw(key: &Self::PublicKey) -> Cow<'_, Self::PublicKeyBytes> {
         Cow::Borrowed(key.as_bytes())
     }
-    fn import_public_key_raw(key: &[u8]) -> Result<Self::PublicKey, Self::IoError> {
-        let mut buf = [0u8; 32];
-        if key.len() != buf.len() {
-            return Err(InvalidKeyLen(key.len()));
-        }
-        buf.copy_from_slice(key);
-
-        Ok(PublicKey::from(buf))
+    fn import_public_key_raw(key: &Self::PublicKeyBytes) -> Result<Self::PublicKey, Self::IoError> {
+        Ok(PublicKey::from(*key))
     }
 
     #[cfg(feature = "der")]
@@ -51,17 +46,11 @@ impl PublicKeyCryptosystem for X25519Cryptosystem {
     // NOTE: Exporting secret keys is not recommended, as using ephemeral keys for key exchange is
     // *much* more secure.
 
-    fn export_secret_key_raw(key: &Self::SecretKey) -> Cow<'_, [u8]> {
+    fn export_secret_key_raw(key: &Self::SecretKey) -> Cow<'_, Self::SecretKeyBytes> {
         Cow::Borrowed(key.as_bytes())
     }
-    fn import_secret_key_raw(key: &[u8]) -> Result<Self::SecretKey, Self::IoError> {
-        let mut buf = [0u8; 32];
-        if key.len() != buf.len() {
-            return Err(InvalidKeyLen(key.len()));
-        }
-        buf.copy_from_slice(key);
-
-        Ok(StaticSecret::from(buf))
+    fn import_secret_key_raw(key: &Self::SecretKeyBytes) -> Result<Self::SecretKey, Self::IoError> {
+        Ok(StaticSecret::from(*key))
     }
 
     #[cfg(feature = "der")]
@@ -76,7 +65,9 @@ impl PublicKeyCryptosystem for X25519Cryptosystem {
 impl KeyEncapsulationCryptosystem for X25519Cryptosystem {
     // Need to use the raw bytes so we get cloning
     type SharedSecret = [u8; 32];
+    type SharedSecretBytes = Self::SharedSecret;
     type Encapsulation = [u8; 32];
+    type EncapsulationBytes = Self::Encapsulation;
     type Error = std::convert::Infallible;
     type IoError = InvalidEncapsulationLen;
 
@@ -105,22 +96,20 @@ impl KeyEncapsulationCryptosystem for X25519Cryptosystem {
 
     // Same as importing a public key (because we are)
     fn import_encapsulation(
-        encapsulation: &[u8],
+        encapsulation: &Self::EncapsulationBytes,
     ) -> Result<Self::Encapsulation, <Self as KeyEncapsulationCryptosystem>::IoError> {
-        let mut buf = [0u8; 32];
-        if encapsulation.len() != buf.len() {
-            return Err(InvalidEncapsulationLen(encapsulation.len()));
-        }
-        buf.copy_from_slice(encapsulation);
-
-        Ok(buf)
+        Ok(encapsulation.to_owned())
     }
 
-    fn export_encapsulation(encapsulation: &Self::Encapsulation) -> Cow<'_, [u8]> {
+    fn export_encapsulation(
+        encapsulation: &Self::Encapsulation,
+    ) -> Cow<'_, Self::EncapsulationBytes> {
         Cow::Borrowed(encapsulation)
     }
 
-    fn export_shared_secret(shared_secret: &Self::SharedSecret) -> Cow<'_, [u8]> {
+    fn export_shared_secret(
+        shared_secret: &Self::SharedSecret,
+    ) -> Cow<'_, Self::SharedSecretBytes> {
         Cow::Borrowed(shared_secret)
     }
 }

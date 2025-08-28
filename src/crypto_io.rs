@@ -1,3 +1,4 @@
+use crate::crypto_array::{BadSize, HasCryptoLen};
 #[cfg(feature = "base64")]
 use crate::error::FromBase64Error;
 #[cfg(feature = "hex")]
@@ -5,18 +6,38 @@ use crate::error::FromHexError;
 #[cfg(feature = "pem")]
 use crate::error::FromPemError;
 use std::borrow::Cow;
+use thiserror::Error;
 
 /// A trait for cryptographic values that can be imported from a variety of formats, based on their
 /// raw byte encodings. The formats available depend on the feature flags (currently `hex` and
 /// `base64`).
 pub trait CryptoImport {
+    /// The type of the raw bytes this object expects when imported from an "exact-size" object,
+    /// like `[u8; N]` or, because of the semantics of `HasCryptoLen`, `Vec<u8>`. In essence, when
+    /// the user doesn't give `&[u8]`, this is what they should give in "exact" terms.
+    type Bytes: HasCryptoLen;
+    /// The type of errors that can occur when importing this cryptographic value.
     type Error: std::error::Error;
 
     /// Imports this cryptographic value from the given bytes.
     ///
     /// For types that also implement [`CryptoDerImport`], this expects the *raw* bytes, not the
     /// DER-encoded bytes!
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Self::Error>
+    fn from_bytes(bytes: &[u8]) -> Result<Self, SizedIoError<Self::Error>>
+    where
+        Self: Sized,
+    {
+        Self::from_bytes_exact(&Self::Bytes::from_slice(bytes)?).map_err(SizedIoError::Other)
+    }
+
+    /// Imports this cryptographic value from the given "exact" bytes, which are of the type
+    /// expected when this value is exported, which will be something like `[u8; N]` or `Vec<u8>`.
+    /// If you have a `&[u8]`, you should use [`CryptoImport::from_bytes`] instead, which will
+    /// handle issues with incorrect sizings. See [`HasCryptoLen`] for details.
+    ///
+    /// For types that also implement [`CryptoDerImport`], this expects the *raw* bytes, not the
+    /// DER-encoded bytes!
+    fn from_bytes_exact(bytes: &Self::Bytes) -> Result<Self, Self::Error>
     where
         Self: Sized;
 
@@ -53,11 +74,14 @@ pub trait CryptoImport {
 /// raw byte encodings. The formats available depend on the feature flags (currently `hex` and
 /// `base64`).
 pub trait CryptoExport {
+    /// The type of the raw bytes this object produces when exported.
+    type Output: HasCryptoLen;
+
     /// Exports this cryptographic value to bytes.
     ///
     /// For types that also implement [`CryptoDerExport`], this will be the *raw* bytes, not the
     /// DER-encoded bytes!
-    fn to_bytes(&self) -> Cow<'_, [u8]>;
+    fn to_bytes(&self) -> Cow<'_, Self::Output>;
 
     /// Exports this cryptographic value to a hex-encoded string.
     ///
@@ -66,7 +90,7 @@ pub trait CryptoExport {
     #[cfg(feature = "hex")]
     fn to_hex(&self) -> String {
         let bytes = self.to_bytes();
-        hex::encode(bytes)
+        hex::encode(bytes.as_ref().as_ref())
     }
 
     /// Exports this cryptographic value to a base64-encoded string.
@@ -78,7 +102,7 @@ pub trait CryptoExport {
         use crate::base64_utils::bytes_to_base64;
 
         let bytes = self.to_bytes();
-        bytes_to_base64(&bytes, url_safe)
+        bytes_to_base64(bytes.as_ref().as_ref(), url_safe)
     }
 }
 
@@ -149,5 +173,26 @@ pub trait CryptoDerExport: CryptoExport {
             header = Self::pem_header(),
             contents = base64
         ))
+    }
+}
+
+/// An error that can occur when importing an object which may have a fixed size from a slice of bytes.
+/// This is a wrapper over the underlying cryptosystem's error type, with an additional variant for
+/// the slice being of the wrong size.
+#[derive(Error, Debug)]
+pub enum SizedIoError<E> {
+    #[error(transparent)]
+    BadSize(#[from] BadSize),
+    #[error(transparent)]
+    Other(E),
+}
+
+// This avoids needing a special `Ciphertext` type, we can just handle exporting natively from any
+// fixed or variable-length container of bytes instead
+impl<A: HasCryptoLen> CryptoExport for A {
+    type Output = A;
+
+    fn to_bytes(&self) -> Cow<'_, Self::Output> {
+        Cow::Borrowed(self)
     }
 }

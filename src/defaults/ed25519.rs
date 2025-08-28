@@ -1,11 +1,10 @@
-use std::borrow::Cow;
-
 use crate::{
     cryptosystem::{PublicKeyCryptosystem, SigningCryptosystem},
     signing_cryptosystem_tests,
 };
 use ed25519_dalek::{Signature, SignatureError, Signer, SigningKey, Verifier, VerifyingKey};
 use rand::rngs::OsRng;
+use std::borrow::Cow;
 use thiserror::Error;
 
 /// A cryptosystem using Ed25519 for signing and verification.
@@ -13,7 +12,9 @@ use thiserror::Error;
 pub struct Ed25519Cryptosystem;
 impl PublicKeyCryptosystem for Ed25519Cryptosystem {
     type PublicKey = VerifyingKey;
+    type PublicKeyBytes = [u8; 32];
     type SecretKey = SigningKey;
+    type SecretKeyBytes = [u8; 32];
     type IoError = Ed25519IoError;
 
     fn generate_keypair() -> (Self::PublicKey, Self::SecretKey) {
@@ -23,18 +24,11 @@ impl PublicKeyCryptosystem for Ed25519Cryptosystem {
         (verifying_key, signing_key)
     }
 
-    fn export_public_key_raw(key: &Self::PublicKey) -> Cow<'_, [u8]> {
+    fn export_public_key_raw(key: &Self::PublicKey) -> Cow<'_, Self::PublicKeyBytes> {
         Cow::Borrowed(key.as_bytes())
     }
-    fn import_public_key_raw(key: &[u8]) -> Result<Self::PublicKey, Self::IoError> {
-        let mut buf = [0u8; 32];
-        if key.len() != buf.len() {
-            // We can borrow this error type, it's opaque anyway and byte length issues are
-            // documented as a possible error source
-            return Err(Ed25519IoError::InvalidKeyLen(key.len()));
-        }
-        buf.copy_from_slice(key);
-        Ok(VerifyingKey::from_bytes(&buf)?)
+    fn import_public_key_raw(key: &Self::PublicKeyBytes) -> Result<Self::PublicKey, Self::IoError> {
+        Ok(VerifyingKey::from_bytes(key)?)
     }
 
     #[cfg(feature = "der")]
@@ -51,19 +45,12 @@ impl PublicKeyCryptosystem for Ed25519Cryptosystem {
         Ok(VerifyingKey::from_public_key_der(key)?)
     }
 
-    fn export_secret_key_raw(key: &Self::SecretKey) -> Cow<'_, [u8]> {
+    fn export_secret_key_raw(key: &Self::SecretKey) -> Cow<'_, Self::SecretKeyBytes> {
         Cow::Borrowed(key.as_bytes())
     }
-    fn import_secret_key_raw(key: &[u8]) -> Result<Self::SecretKey, Self::IoError> {
-        let mut buf = [0u8; 32];
-        if key.len() != buf.len() {
-            // We can borrow this error type, it's opaque anyway and byte length issues are
-            // documented as a possible error source
-            return Err(Ed25519IoError::InvalidKeyLen(key.len()));
-        }
-        buf.copy_from_slice(key);
+    fn import_secret_key_raw(key: &Self::SecretKeyBytes) -> Result<Self::SecretKey, Self::IoError> {
         // Infallible
-        Ok(SigningKey::from_bytes(&buf))
+        Ok(SigningKey::from_bytes(&key))
     }
 
     #[cfg(feature = "der")]
@@ -84,6 +71,7 @@ impl SigningCryptosystem for Ed25519Cryptosystem {
     // All byte sequences are valid signatures, and we need this to avooid lifetime issues with how
     // `ed25519_dalek` stores signature bytes internally.
     type Signature = [u8; 64];
+    type SignatureBytes = Self::Signature;
     type Error = SignatureError;
     type IoError = InvalidSignatureLen;
 
@@ -101,20 +89,13 @@ impl SigningCryptosystem for Ed25519Cryptosystem {
         // TODO: Should we be using `verify_strict` here? Malleability issues...
         key.verify(msg, &signature)
     }
-    fn export_signature(signature: &Self::Signature) -> Cow<'_, [u8]> {
-        Cow::Borrowed(signature.as_ref())
+    fn export_signature(signature: &Self::Signature) -> Cow<'_, Self::SignatureBytes> {
+        Cow::Borrowed(signature)
     }
     fn import_signature(
-        signature: &[u8],
+        signature: &Self::SignatureBytes,
     ) -> Result<Self::Signature, <Self as SigningCryptosystem>::IoError> {
-        // Any 64 bytes are a valid signature, so we just need to make sure we have 64 bytes
-        let mut buf = [0u8; 64];
-        if signature.len() != buf.len() {
-            return Err(InvalidSignatureLen(signature.len()));
-        }
-        buf.copy_from_slice(signature);
-
-        Ok(buf)
+        Ok(signature.to_owned())
     }
 }
 
