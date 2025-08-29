@@ -25,6 +25,7 @@ mod signature;
 mod sizes;
 mod symmetric_key;
 
+pub use crate::crypto_array::*;
 pub use crate::crypto_io::*;
 pub use crate::cryptosystem::{
     KeyEncapsulationCryptosystem, PublicKeyCryptosystem, SigningCryptosystem, SymmetricCryptosystem,
