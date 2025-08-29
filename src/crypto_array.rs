@@ -178,6 +178,15 @@ pub trait HasCryptoLen: Clone + AsRef<[u8]> + AsMut<[u8]> {
         self.as_ref().len()
     }
 
+    /// Sets the size of this array. This is intended to standardise operations across fixed and
+    /// variable-length arrays. For fixed-length arrays, this is a no-op that applies an assertion
+    /// that the size set is the array's actual size, while for variable-length arrays, this will
+    /// extend the array with zeroes or truncate it as appropriate.
+    ///
+    /// This is designed for operations that need to run on a user-provided buffer to make sure
+    /// it's the right size.
+    fn set_size(&mut self, size: usize);
+
     /// Returns whether or not this is a fixed-length array. If you need this at const time, use
     /// [`Self::Length::UNSIGNED`] instead, it will be `0` if variable-length, or non-zero if
     /// fixed.
@@ -193,6 +202,9 @@ impl HasCryptoLen for Vec<u8> {
     }
     fn from_slice(slice: &[u8]) -> Result<Self, BadSize> {
         Ok(slice.to_vec())
+    }
+    fn set_size(&mut self, size: usize) {
+        self.resize(size, 0);
     }
 }
 impl<const N: usize> HasCryptoLen for [u8; N]
@@ -216,6 +228,9 @@ where
         arr.copy_from_slice(slice);
         Ok(arr)
     }
+    fn set_size(&mut self, size: usize) {
+        assert_eq!(size, N);
+    }
 }
 impl<B: Bitstring> HasCryptoLen for CryptoArray<B> {
     type Length = B;
@@ -225,6 +240,9 @@ impl<B: Bitstring> HasCryptoLen for CryptoArray<B> {
     }
     fn from_slice(slice: &[u8]) -> Result<Self, BadSize> {
         Self::from_slice(slice)
+    }
+    fn set_size(&mut self, size: usize) {
+        self.set_size(size);
     }
 }
 
@@ -251,28 +269,11 @@ pub trait OwnedHasCryptoLen: AsRef<[u8]> + AsMut<[u8]> {
     /// it's the right size.
     fn set_size(&mut self, size: usize);
 }
-impl<const N: usize> OwnedHasCryptoLen for [u8; N]
-where
-    ConstWrapper<N>: ToBitstring,
-{
-    type Owned = [u8; N];
-
-    fn set_size(&mut self, size: usize) {
-        assert_eq!(size, N);
-    }
-}
-impl<B: Bitstring> OwnedHasCryptoLen for CryptoArray<B> {
-    type Owned = CryptoArray<B>;
+impl<A: HasCryptoLen> OwnedHasCryptoLen for A {
+    type Owned = A;
 
     fn set_size(&mut self, size: usize) {
         self.set_size(size);
-    }
-}
-impl OwnedHasCryptoLen for Vec<u8> {
-    type Owned = Vec<u8>;
-
-    fn set_size(&mut self, size: usize) {
-        self.resize(size, 0);
     }
 }
 impl OwnedHasCryptoLen for [u8] {
