@@ -135,6 +135,9 @@ impl<N: Bitstring> IndexMut<usize> for CryptoArray<N> {
     }
 }
 
+// NOTE: We don't need to implement `CryptoImport` or `CryptoExport`, it's already implemented for
+// everything that implemented `HasCryptoLen`
+
 enum CryptoArrayInner<N: Bitstring> {
     Fixed(Array<u8, N>),
     Variable(Vec<u8>),
@@ -159,6 +162,10 @@ pub trait HasCryptoLen: Clone + AsRef<[u8]> + AsMut<[u8]> {
     /// The bitstring length of this array, which lets us do fancy addition and subtraction.
     type Length: Bitstring;
 
+    /// Creates a new instance of this array, zeroed out. This is designed mainly for fixed-length
+    /// arrays, as variable-length arrays will be created with no elements at all.
+    fn zeroed() -> Self;
+
     /// Creates a new [`HasCryptoLen`] from the given slice of bytes. This will fail with a
     /// [`BadSize`] error if the given slice is the wrong size (which of course can only be the
     /// case with a fixed-length array, as a variable-length one will accept anything).
@@ -181,6 +188,9 @@ pub trait HasCryptoLen: Clone + AsRef<[u8]> + AsMut<[u8]> {
 impl HasCryptoLen for Vec<u8> {
     type Length = B0;
 
+    fn zeroed() -> Self {
+        Vec::new()
+    }
     fn from_slice(slice: &[u8]) -> Result<Self, BadSize> {
         Ok(slice.to_vec())
     }
@@ -188,10 +198,13 @@ impl HasCryptoLen for Vec<u8> {
 impl<const N: usize> HasCryptoLen for [u8; N]
 where
     // Parsing bound!
-    Const<N>: ToBitstring,
+    ConstWrapper<N>: ToBitstring,
 {
-    type Length = <Const<N> as ToBitstring>::Bitstring;
+    type Length = <ConstWrapper<N> as ToBitstring>::Bitstring;
 
+    fn zeroed() -> Self {
+        [0u8; N]
+    }
     fn from_slice(slice: &[u8]) -> Result<Self, BadSize> {
         if slice.len() != N {
             return Err(BadSize {
@@ -207,6 +220,9 @@ where
 impl<B: Bitstring> HasCryptoLen for CryptoArray<B> {
     type Length = B;
 
+    fn zeroed() -> Self {
+        Self::new()
+    }
     fn from_slice(slice: &[u8]) -> Result<Self, BadSize> {
         Self::from_slice(slice)
     }
@@ -237,7 +253,7 @@ pub trait OwnedHasCryptoLen: AsRef<[u8]> + AsMut<[u8]> {
 }
 impl<const N: usize> OwnedHasCryptoLen for [u8; N]
 where
-    Const<N>: ToBitstring,
+    ConstWrapper<N>: ToBitstring,
 {
     type Owned = [u8; N];
 
@@ -334,8 +350,8 @@ pub type CryptoArrayDiff<A1 /*: HasCryptoLen*/, A2 /*: HasCryptoLen*/> =
 /// for *any* length, expressing that you can use a variable-length array to store any length of
 /// data.
 pub trait CryptoBuffer<N: Bitstring> {}
-impl<const N: usize> CryptoBuffer<<Const<N> as ToBitstring>::Bitstring> for [u8; N] where
-    Const<N>: ToBitstring
+impl<const N: usize> CryptoBuffer<<ConstWrapper<N> as ToBitstring>::Bitstring> for [u8; N] where
+    ConstWrapper<N>: ToBitstring
 {
 }
 impl<N: Bitstring> CryptoBuffer<N> for Vec<u8> {}
@@ -350,7 +366,11 @@ impl<N: Bitstring> CryptoBuffer<N> for CryptoArray<N> {}
 
 /// An intermediate type that has no function other than to implement [`ToBitstring`] for the given
 /// constant. This acts as a bridge between raw `usize` values and [`Bitstring`].
-pub struct Const<const N: usize>;
+pub struct ConstWrapper<const N: usize>;
+
+/// A type alias for the bitstring representation of the given constant. This is not implemented
+/// for all `N: usize`, see [`ToBitstring`] for details.
+pub type Const<const N: usize> = <ConstWrapper<N> as ToBitstring>::Bitstring;
 
 /// A trait for converting numbers into bitstrings. This is implemented for a large number of
 /// [`Const<N>`] types.

@@ -5,7 +5,7 @@ use crate::error::FromBase64Error;
 use crate::error::FromHexError;
 #[cfg(feature = "pem")]
 use crate::error::FromPemError;
-use std::borrow::Cow;
+use std::{borrow::Cow, convert::Infallible};
 use thiserror::Error;
 
 /// A trait for cryptographic values that can be imported from a variety of formats, based on their
@@ -187,6 +187,18 @@ pub enum SizedIoError<E> {
     Other(E),
 }
 
+// TODO: Is this okay??
+impl<A: HasCryptoLen> CryptoImport for A {
+    type Bytes = Self;
+    type Error = Infallible;
+
+    fn from_bytes_exact(bytes: &Self::Bytes) -> Result<Self, Self::Error>
+    where
+        Self: Sized,
+    {
+        Ok(bytes.clone())
+    }
+}
 // This avoids needing a special `Ciphertext` type, we can just handle exporting natively from any
 // fixed or variable-length container of bytes instead
 impl<A: HasCryptoLen> CryptoExport for A {

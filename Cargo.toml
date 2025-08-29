@@ -17,9 +17,10 @@ ring = { version = "0.17.13", optional = true }
 rand = { version = "0.8.5", optional = true }
 ml-kem = { version = "0.2.1", optional = true }
 blake3 = "1.8.2"
-hybrid-array = "0.3.1"
-typenum = { version = "1.18.0", features = [ "const-generics" ] }
 typebits = { version = "0.1.0", git = "https://github.com/arctic-hen7/typebits", features = [ "array" ] }
+
+[dev-dependencies]
+serde = { version = "1.0.214", features = [ "derive" ] }
 
 [features]
 #default = []
@@ -33,5 +34,5 @@ pem = [ "der", "base64", "ed25519-dalek?/pkcs8" ]
 default-chacha20poly1305 = [ "chacha20poly1305" ]
 default-ed25519 = [ "ed25519-dalek", "rand" ]
 default-x25519 = [ "x25519-dalek" ]
-default-kyber = [ "ml-kem", "hybrid-array/extra-sizes" ]
+default-kyber = [ "ml-kem" ]
 

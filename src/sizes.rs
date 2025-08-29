@@ -1,7 +1,7 @@
-use crate::crypto_array::{Const, ToBitstring};
+use crate::crypto_array::{ConstWrapper, ToBitstring};
 use typebits::{bs, B0, B1};
 
-unsafe impl ToBitstring for Const<0> {
+unsafe impl ToBitstring for ConstWrapper<0> {
     type Bitstring = B0;
 }
 
@@ -10,7 +10,9 @@ unsafe impl ToBitstring for Const<0> {
 #[macro_export]
 macro_rules! impl_const {
     (unsafe $const:literal, $bitstring:ty) => {
-        unsafe impl $crate::crypto_array::ToBitstring for $crate::crypto_array::Const<$const> {
+        unsafe impl $crate::crypto_array::ToBitstring
+            for $crate::crypto_array::ConstWrapper<$const>
+        {
             type Bitstring = $bitstring;
         }
     };
