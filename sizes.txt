@@ -1,0 +1,41 @@
+# This file defines the sizes we implement constant conversion into bitstrings for. Any extra
+# constants needed should be added here, and `build.rs` will work out the binary representation
+# and compile them in. Note that end-users can also add their own constants if needed.
+
+# Regular (note: 1 is handled specially)
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+
+32
+40
+64
+
+# CRYSTALS-Kyber
+768
+800
+1632
+
+# CRYSTALS-Dilithium
+1952
+3309
+4032
+
+# x25519 + Kyber
+832
+1664
+
+# ed25519 + Dilithium
+# TODO
