@@ -104,8 +104,10 @@ macro_rules! signing_cryptosystem_tests {
                 let (pub_key, sec_key) = <$cs>::generate_keypair();
 
                 let plaintext = b"Hello, world!";
-                let mut signature = <$cs>::sign(plaintext, &sec_key).unwrap();
-                signature[0] ^= 1;
+                let signature = <$cs>::sign(plaintext, &sec_key).unwrap();
+                let mut signature_bytes = <$cs>::export_signature(&signature);
+                signature_bytes.to_mut()[0] ^= 1;
+                let signature = <$cs>::import_signature(&signature_bytes).unwrap();
                 let result = <$cs>::verify(&signature, plaintext, &pub_key);
                 assert!(result.is_err());
             }

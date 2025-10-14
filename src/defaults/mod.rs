@@ -1,5 +1,7 @@
 #[cfg(feature = "default-chacha20poly1305")]
 mod chacha20_poly1305;
+#[cfg(feature = "default-dilithium")]
+mod dilithium;
 #[cfg(feature = "default-ed25519")]
 mod ed25519;
 #[cfg(feature = "default-kyber")]
