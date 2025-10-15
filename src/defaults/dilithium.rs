@@ -7,7 +7,7 @@ use ml_dsa::{
     KeyGen, MlDsa65, Signature, SigningKey, VerifyingKey,
 };
 use pkcs8::{DecodePublicKey, EncodePublicKey};
-use rand::{rngs::OsRng, RngCore};
+use rand::{TryCryptoRng, TryRngCore};
 use std::borrow::Cow;
 use thiserror::Error;
 
@@ -27,17 +27,31 @@ impl PublicKeyCryptosystem for DilithiumCryptosystem {
     type SecretKeyBytes = [u8; 32];
     type IoError = DilithiumIoError;
 
-    fn generate_keypair() -> (Self::PublicKey, Self::SecretKey) {
+    fn generate_keypair_from_rng<R: TryRngCore + TryCryptoRng>(
+        rng: &mut R,
+    ) -> Result<(Self::PublicKey, Self::SecretKey), R::Error> {
         // This generation is the same as `MlDsa65::key_gen()` does internally, but we get to
         // extract the seed so we can use it ourselves
         let mut seed = [0u8; 32];
-        OsRng.fill_bytes(&mut seed);
+        rng.try_fill_bytes(&mut seed)?;
         // This is deterministic
         let keypair = MlDsa65::key_gen_internal(&seed.into());
 
-        (
+        Ok((
             keypair.verifying_key().clone(),
             (seed, keypair.signing_key().clone()),
+        ))
+    }
+
+    // NOTE: The `ml-dsa` library conveniently exposes a method for this, so re-implementing
+    // instead of the default avoids an extra RNG call
+    fn generate_keypair_from_seed(seed: &[u8; 32]) -> (Self::PublicKey, Self::SecretKey) {
+        // This is deterministic
+        let keypair = MlDsa65::key_gen_internal(seed.into());
+
+        (
+            keypair.verifying_key().clone(),
+            (seed.clone(), keypair.signing_key().clone()),
         )
     }
 

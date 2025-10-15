@@ -3,7 +3,7 @@ use crate::{
     signing_cryptosystem_tests,
 };
 use ed25519_dalek::{Signature, SignatureError, Signer, SigningKey, Verifier, VerifyingKey};
-use rand::rngs::OsRng;
+use rand::{TryCryptoRng, TryRngCore};
 use std::borrow::Cow;
 use thiserror::Error;
 
@@ -17,11 +17,17 @@ impl PublicKeyCryptosystem for Ed25519Cryptosystem {
     type SecretKeyBytes = [u8; 32];
     type IoError = Ed25519IoError;
 
-    fn generate_keypair() -> (Self::PublicKey, Self::SecretKey) {
-        let signing_key = SigningKey::generate(&mut OsRng);
+    fn generate_keypair_from_rng<R: TryRngCore + TryCryptoRng>(
+        rng: &mut R,
+    ) -> Result<(Self::PublicKey, Self::SecretKey), R::Error> {
+        // Downstream crate uses an old version of `rand`, so we generate the secret manually,
+        // hwich is helpfully infallible
+        let mut key_bytes = [0u8; 32];
+        rng.try_fill_bytes(&mut key_bytes)?;
+        let signing_key = SigningKey::from_bytes(&key_bytes);
         let verifying_key = signing_key.verifying_key();
 
-        (verifying_key, signing_key)
+        Ok((verifying_key, signing_key))
     }
 
     fn export_public_key_raw(key: &Self::PublicKey) -> Cow<'_, Self::PublicKeyBytes> {

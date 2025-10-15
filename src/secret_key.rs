@@ -5,6 +5,7 @@ use crate::{
     PublicKey,
 };
 use crate::{CryptoError, Encapsulation, SharedSecret, Signature};
+use rand::{TryCryptoRng, TryRngCore};
 #[cfg(feature = "serde")]
 use serde::Serialize;
 use std::borrow::Cow;
@@ -59,9 +60,32 @@ impl<C: PublicKeyCryptosystem> CryptoDerExport for SecretKey<C> {
 
 impl<C: PublicKeyCryptosystem> SecretKey<C> {
     /// Generates a new asymmetric keypair of a public key and secret key.
+    ///
+    /// # Panics
+    ///
+    /// This uses [`OsRng`] to generate randomness, and will panic if getting random values fails.
     pub fn generate_keypair() -> (PublicKey<C>, Self) {
         let (pubkey, key) = C::generate_keypair();
         (PublicKey { key: pubkey }, Self { key })
+    }
+
+    /// Generates a new asymmetric keypair of a public key and secret key from the given seed,
+    /// which **must** be cryptographically secure. If you haven't put key material through a KDF,
+    /// or initial key material through a memory-hard hash function, or directly sourced your seed
+    /// from a CSPRNG, you should *not* use this function! (If you're unsure, use
+    /// [`Self::generate_keypair`]).
+    pub fn generate_keypair_from_seed(seed: &[u8; 32]) -> (PublicKey<C>, Self) {
+        let (pubkey, key) = C::generate_keypair_from_seed(seed);
+        (PublicKey { key: pubkey }, Self { key })
+    }
+
+    /// Generates a new asymmetric keypair of a public key and secret key from the given
+    /// cryptographically secure random number generator, failing if it fails.
+    pub fn generate_keypair_from_rng<R: TryRngCore + TryCryptoRng>(
+        rng: &mut R,
+    ) -> Result<(PublicKey<C>, Self), R::Error> {
+        let (pubkey, key) = C::generate_keypair_from_rng(rng)?;
+        Ok((PublicKey { key: pubkey }, Self { key }))
     }
 }
 

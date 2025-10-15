@@ -3,10 +3,10 @@ use crate::{
     key_encapsulation_cryptosystem_tests, KeyEncapsulationCryptosystem, PublicKeyCryptosystem,
 };
 use ml_kem::{
-    kem::{Decapsulate, DecapsulationKey, Encapsulate, EncapsulationKey},
-    EncodedSizeUser, KemCore, MlKem512, MlKem512Params,
+    kem::{Decapsulate, DecapsulationKey, EncapsulationKey},
+    EncapsulateDeterministic, EncodedSizeUser, KemCore, MlKem512, MlKem512Params,
 };
-use rand::rngs::OsRng;
+use rand::{TryCryptoRng, TryRngCore};
 use std::borrow::Cow;
 
 // Yeah...
@@ -30,11 +30,21 @@ impl PublicKeyCryptosystem for KyberCryptosystem {
     type SecretKeyBytes = [u8; SECRET_KEY_LEN];
     type IoError = InvalidKeyLen;
 
-    fn generate_keypair() -> (Self::PublicKey, Self::SecretKey) {
-        let (dk, ek) = MlKem512::generate(&mut OsRng);
+    fn generate_keypair_from_rng<R: rand::TryRngCore + rand::TryCryptoRng>(
+        rng: &mut R,
+    ) -> Result<(Self::PublicKey, Self::SecretKey), R::Error> {
+        // We can generate the parameters manually with our version of `rand` and then pass them
+        // in. This is the only thing we need `deterministic` on `ml_kem` for.
+        let mut d = [0u8; 32];
+        let mut z = [0u8; 32];
+        rng.try_fill_bytes(&mut d)?;
+        rng.try_fill_bytes(&mut z)?;
+
+        // Yes, this cooked reference-then-convert is the best `hybrid_array` gives us ;)
+        let (dk, ek) = MlKem512::generate_deterministic((&d).into(), (&z).into());
 
         // Encapsulation is public, decapsulation is secret
-        (ek, dk)
+        Ok((ek, dk))
     }
 
     fn export_public_key_raw(key: &Self::PublicKey) -> Cow<'_, Self::PublicKeyBytes> {
@@ -78,13 +88,17 @@ impl KeyEncapsulationCryptosystem for KyberCryptosystem {
     type Error = std::convert::Infallible;
     type IoError = InvalidEncapsulationLen;
 
-    fn encapsulate(
+    fn encapsulate_with_rng<R: TryRngCore + TryCryptoRng>(
         public_key: &Self::PublicKey,
-    ) -> Result<(Self::Encapsulation, Self::SharedSecret), Self::Error> {
+        rng: &mut R,
+    ) -> Result<Result<(Self::Encapsulation, Self::SharedSecret), Self::Error>, R::Error> {
         // NOTE: This is infallible in the code, but they use `()` to denote this
-        let (encapsulation, shared_secret) = public_key.encapsulate(&mut OsRng).unwrap();
+        let mut m = [0u8; 32];
+        rng.try_fill_bytes(&mut m)?;
+        let (encapsulation, shared_secret) =
+            public_key.encapsulate_deterministic((&m).into()).unwrap();
 
-        Ok((encapsulation.into(), shared_secret.into()))
+        Ok(Ok((encapsulation.into(), shared_secret.into())))
     }
 
     fn decapsulate(

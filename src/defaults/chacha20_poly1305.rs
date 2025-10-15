@@ -22,8 +22,14 @@ impl SymmetricCryptosystem for ChaCha20Poly1305Cryptosystem {
     type Error = ChaCha20Poly1305Error;
     type IoError = Infallible;
 
-    fn generate_key() -> Self::Key {
-        XChaCha20Poly1305::generate_key(&mut OsRng)
+    fn generate_key_from_rng<R: rand::TryRngCore + rand::TryCryptoRng>(
+        rng: &mut R,
+    ) -> Result<Self::Key, R::Error> {
+        // A key is literally a 32-byte array, we get around different `rand` versions by
+        // generating the key bytes manually
+        let mut key_bytes = [0u8; 32];
+        rng.try_fill_bytes(&mut key_bytes)?;
+        Ok(key_bytes.into())
     }
 
     fn encrypt_to_buf<P: OwnedHasCryptoLen + ?Sized, B: OwnedHasCryptoLen + ?Sized>(

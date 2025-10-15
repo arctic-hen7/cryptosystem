@@ -8,6 +8,7 @@ use crate::{
     crypto_io::{CryptoExport, CryptoImport},
     SymmetricCryptosystem,
 };
+use rand::{TryCryptoRng, TryRngCore};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -34,10 +35,33 @@ impl<C: SymmetricCryptosystem> CryptoExport for SymmetricKey<C> {
 }
 impl<C: SymmetricCryptosystem> SymmetricKey<C> {
     /// Generates a new symmetric key.
+    ///
+    /// # Panics
+    ///
+    /// This uses [`OsRng`] to generate randomness, and will panic if getting random values fails.
     pub fn generate() -> Self {
         Self {
             key: C::generate_key(),
         }
+    }
+
+    /// Generates a new symmetric key from the given seed,
+    /// which **must** be cryptographically secure. If you haven't put key material through a KDF,
+    /// or initial key material through a memory-hard hash function, or directly sourced your seed
+    /// from a CSPRNG, you should *not* use this function! (If you're unsure, use
+    /// [`Self::generate_keypair`]).
+    pub fn generate_from_seed(seed: &[u8; 32]) -> Self {
+        Self {
+            key: C::generate_key_from_seed(seed),
+        }
+    }
+
+    /// Generates a new symmetric key from the given
+    /// cryptographically secure random number generator, failing if it fails.
+    pub fn generate_from_rng<R: TryRngCore + TryCryptoRng>(rng: &mut R) -> Result<Self, R::Error> {
+        Ok(Self {
+            key: C::generate_key_from_rng(rng)?,
+        })
     }
 
     /// Encrypts the given bytes with this symmetric key, writing the result to the given buffer.

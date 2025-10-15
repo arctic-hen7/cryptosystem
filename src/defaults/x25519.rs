@@ -1,7 +1,7 @@
 use crate::{
     key_encapsulation_cryptosystem_tests, KeyEncapsulationCryptosystem, PublicKeyCryptosystem,
 };
-use rand::rngs::OsRng;
+use rand::{TryCryptoRng, TryRngCore};
 use std::borrow::Cow;
 use thiserror::Error;
 use x25519_dalek::{PublicKey, StaticSecret};
@@ -20,11 +20,15 @@ impl PublicKeyCryptosystem for X25519Cryptosystem {
     type SecretKeyBytes = [u8; 32];
     type IoError = InvalidKeyLen;
 
-    fn generate_keypair() -> (Self::PublicKey, Self::SecretKey) {
-        let secret_key = StaticSecret::random_from_rng(OsRng);
+    fn generate_keypair_from_rng<R: rand::TryRngCore + rand::TryCryptoRng>(
+        rng: &mut R,
+    ) -> Result<(Self::PublicKey, Self::SecretKey), R::Error> {
+        let mut secret_key_bytes = [0u8; 32];
+        rng.try_fill_bytes(&mut secret_key_bytes)?;
+        let secret_key = StaticSecret::from(secret_key_bytes);
         let public_key = PublicKey::from(&secret_key);
 
-        (public_key, secret_key)
+        Ok((public_key, secret_key))
     }
 
     fn export_public_key_raw(key: &Self::PublicKey) -> Cow<'_, Self::PublicKeyBytes> {
@@ -72,15 +76,15 @@ impl KeyEncapsulationCryptosystem for X25519Cryptosystem {
     type IoError = InvalidEncapsulationLen;
 
     // Encapsulate by creating an ephemeral keypair and sending the public key
-    fn encapsulate(
+    fn encapsulate_with_rng<R: TryRngCore + TryCryptoRng>(
         public_key: &Self::PublicKey,
-    ) -> Result<(Self::Encapsulation, Self::SharedSecret), Self::Error> {
-        let ephemeral_secret_key = StaticSecret::random_from_rng(OsRng);
-        let ephemeral_public_key = PublicKey::from(&ephemeral_secret_key);
+        rng: &mut R,
+    ) -> Result<Result<(Self::Encapsulation, Self::SharedSecret), Self::Error>, R::Error> {
+        let (ephemeral_public_key, ephemeral_secret_key) = Self::generate_keypair_from_rng(rng)?;
 
         let shared_secret = ephemeral_secret_key.diffie_hellman(public_key).to_bytes();
         let encapsulation = ephemeral_public_key.as_bytes().to_owned();
-        Ok((encapsulation, shared_secret))
+        Ok(Ok((encapsulation, shared_secret)))
     }
 
     // Then decapsulate with regular Diffie-Hellman

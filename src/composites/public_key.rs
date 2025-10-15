@@ -14,10 +14,12 @@ impl<C1: PublicKeyCryptosystem, C2: PublicKeyCryptosystem> PublicKeyCryptosystem
         <C2 as PublicKeyCryptosystem>::IoError,
     >;
 
-    fn generate_keypair() -> (Self::PublicKey, Self::SecretKey) {
-        let (pk_1, sk_1) = C1::generate_keypair();
-        let (pk_2, sk_2) = C2::generate_keypair();
-        ((pk_1, pk_2), (sk_1, sk_2))
+    fn generate_keypair_from_rng<R: rand::TryRngCore + rand::TryCryptoRng>(
+        rng: &mut R,
+    ) -> Result<(Self::PublicKey, Self::SecretKey), R::Error> {
+        let (pk_1, sk_1) = C1::generate_keypair_from_rng(rng)?;
+        let (pk_2, sk_2) = C2::generate_keypair_from_rng(rng)?;
+        Ok(((pk_1, pk_2), (sk_1, sk_2)))
     }
     fn export_public_key_raw(key: &Self::PublicKey) -> Cow<'_, Self::PublicKeyBytes> {
         let key_1 = C1::export_public_key_raw(&key.0);

@@ -1,6 +1,8 @@
 use crate::crypto_array::{
     CryptoArrayDiffLen, CryptoArraySumLen, CryptoBuffer, HasCryptoLen, OwnedHasCryptoLen,
 };
+use rand::{rngs::OsRng, TryRngCore};
+use rand_chacha::rand_core::{SeedableRng, TryCryptoRng};
 use std::borrow::Cow;
 
 /// A trait for a collection of cryptographic primitives for symmetric encryption (i.e. encrypting
@@ -20,9 +22,41 @@ pub trait SymmetricCryptosystem: Clone + Copy + Send + Sync {
     /// The type of errors that can occur when importing a key from bytes.
     type IoError: std::error::Error;
 
-    /// Generates a new key. This should use a cryptographically-secure random number generator,
-    /// and should panic if random bytes cannot be generated.
-    fn generate_key() -> Self::Key;
+    /// Generates a new key securely. This uses [`OsRng`] by default.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the underlying random number generator fails.
+    // TODO: When we support `no_std` environments, this will need to be gated somehow, sources of
+    // randomness might need to be better thought out...
+    fn generate_key() -> Self::Key {
+        Self::generate_key_from_rng(&mut OsRng)
+            .expect("failed to generate randomness for key generation")
+    }
+
+    /// Generates a new key from the given seed. For callers, this seed must be **cryptographically
+    /// secure**, meaning it must have gone through a key derivation function or memory-hard hash
+    /// (e.g. for a password), or have come from a cryptographically-secure random number
+    /// generator. If you aren't sure whether or not your seed is secure, do NOT use this method!
+    ///
+    /// Internally, this seeds [`ChaCha20Rng`] with the given seed and passes it to
+    /// [`Self::generate_key_from_rng`].
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the underlying random number generator fails.
+    fn generate_key_from_seed(seed: &[u8; 32]) -> Self::Key {
+        let mut rng = rand_chacha::ChaCha20Rng::from_seed(*seed);
+        // ChaCha20 is infallible
+        Self::generate_key_from_rng(&mut rng).unwrap()
+    }
+
+    /// Generates a new key from the given cryptographically-secure random number generator. This
+    /// generally shouldn't be needed by end users, but should be implemented by cryptosystems, and
+    /// the other generator methods will be implemented automatically from this one.
+    fn generate_key_from_rng<R: TryRngCore + TryCryptoRng>(
+        rng: &mut R,
+    ) -> Result<Self::Key, R::Error>;
 
     /// Encrypts the given plaintext with the given key, writing the bytes of the ciphertext to the
     /// given buffer.
@@ -153,9 +187,29 @@ pub trait KeyEncapsulationCryptosystem: PublicKeyCryptosystem + Clone + Copy {
     /// Encapsulates a random shared secret to the given public (encapsulation) key. The result is
     /// first the encapsulation, which should be sent to the other party, and the shared secret,
     /// which will be the same as what they "decapsulate".
+    ///
+    /// This takes a source of randomness, and the outer error is about getting randomness failing,
+    /// while the inner is about the encapsulation itself failing.
+    // TODO: Better API for returning randomness issues? Problem is immediately with the `Error`
+    // being used for decapsulation too, hence I don't want `Self::Error<R>`...
+    fn encapsulate_with_rng<R: TryRngCore + TryCryptoRng>(
+        public_key: &Self::PublicKey,
+        rng: &mut R,
+    ) -> Result<Result<(Self::Encapsulation, Self::SharedSecret), Self::Error>, R::Error>;
+
+    // TODO: Do we want a method for encapsulating, given a seed? Probably not...foot shooting
+    // potential...
+
+    /// Encapsulates a random shared secret to the given public (encapsulation) key. The result is
+    /// first the encapsulation, which should be sent to the other party, and the shared secret,
+    /// which will be the same as what they "decapsulate".
+    ///
+    /// This uses [`OsRng`] internally to generate randomness for the encapsulation.
     fn encapsulate(
         public_key: &Self::PublicKey,
-    ) -> Result<(Self::Encapsulation, Self::SharedSecret), Self::Error>;
+    ) -> Result<(Self::Encapsulation, Self::SharedSecret), Self::Error> {
+        Self::encapsulate_with_rng(public_key, &mut OsRng).unwrap()
+    }
 
     /// Decapsulates the given encapsulation with the given secret key. The encapsulation provided
     /// must have been encapsulated to the corresponding public key, or this will fail.
@@ -194,9 +248,43 @@ pub trait PublicKeyCryptosystem: Clone + Copy {
     /// The type of errors that can occur when importing or exporting keys.
     type IoError: std::error::Error;
 
-    /// Generates a new keypair. This should use a cryptographically-secure random number
-    /// generator, and should panic if random bytes cannot be generated.
-    fn generate_keypair() -> (Self::PublicKey, Self::SecretKey);
+    /// Generates a new keypair securely. This uses [`OsRng`] by default.
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the underlying random number generator fails.
+    // TODO: When we support `no_std` environments, this will need to be gated somehow, sources of
+    // randomness might need to be better thought out...
+    fn generate_keypair() -> (Self::PublicKey, Self::SecretKey) {
+        Self::generate_keypair_from_rng(&mut OsRng)
+            .expect("failed to generate randomness for key generation")
+    }
+
+    /// Generates a new keypair from the given seed. For callers, this seed must be
+    /// **cryptographically secure**, meaning it must have gone through a key derivation function
+    /// or memory-hard hash (e.g. for a password), or have come from a cryptographically-secure
+    /// random number generator. If you aren't sure whether or not your seed is secure, do NOT use
+    /// this method!
+    ///
+    /// Internally, this seeds [`ChaCha20Rng`] with the given seed and passes it to
+    /// [`Self::generate_key_from_rng`].
+    ///
+    /// # Panics
+    ///
+    /// This will panic if the underlying random number generator fails.
+    fn generate_keypair_from_seed(seed: &[u8; 32]) -> (Self::PublicKey, Self::SecretKey) {
+        let mut rng = rand_chacha::ChaCha20Rng::from_seed(*seed);
+        // ChaCha20 is infallible
+        Self::generate_keypair_from_rng(&mut rng).unwrap()
+    }
+
+    /// Generates a new keypair from the given cryptographically-secure random number generator.
+    /// This generally shouldn't be needed by end users, but should be implemented by
+    /// cryptosystems, and the other generator methods will be implemented automatically from this
+    /// one.
+    fn generate_keypair_from_rng<R: TryRngCore + TryCryptoRng>(
+        rng: &mut R,
+    ) -> Result<(Self::PublicKey, Self::SecretKey), R::Error>;
 
     /// Exports the given public key to *raw* bytes, without any additional formatting.
     fn export_public_key_raw(key: &Self::PublicKey) -> Cow<'_, Self::PublicKeyBytes>;

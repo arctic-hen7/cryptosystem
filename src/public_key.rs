@@ -5,6 +5,7 @@ use crate::{
     signature::Signature,
 };
 use crate::{CryptoError, KeyEncapsulationCryptosystem, SharedSecret};
+use rand::{TryCryptoRng, TryRngCore};
 #[cfg(feature = "serde")]
 use serde::Serialize;
 use std::borrow::Cow;
@@ -87,6 +88,38 @@ impl<C: KeyEncapsulationCryptosystem> PublicKey<C> {
     /// public key, except the message is random (a shared secret), and is returned by this
     /// function. When the other party "decapsulates", they will get the same shared secret, which
     /// can be used as a symmetric key.
+    ///
+    /// This function takes a source of randomness, if you want to provide one. If you don't need
+    /// to control the randomness (most use-cases), you should use [`Self::encapsulate`] instead.
+    /// The outer error this function returns propagates any errors in getting randomness, and the
+    /// inner one any errors in the actual encapsulation process.
+    pub fn encapsulate_with_rng<R: TryRngCore + TryCryptoRng>(
+        &self,
+        rng: &mut R,
+    ) -> Result<Result<(Encapsulation<C>, SharedSecret<C>), C::Error>, R::Error> {
+        let (encapsulation, shared_secret) = match C::encapsulate_with_rng(&self.key, rng) {
+            Ok(Ok(x)) => x,
+            Ok(Err(err)) => return Ok(Err(err)),
+            Err(rand_err) => return Err(rand_err),
+        };
+
+        Ok(Ok((
+            Encapsulation {
+                inner: encapsulation,
+            },
+            SharedSecret { shared_secret },
+        )))
+    }
+
+    /// Encapsulates a random shared secret to this public key (such that the owner will be able to
+    /// decapsulate it with their secret key). This is similar to encrypting a message to someone's
+    /// public key, except the message is random (a shared secret), and is returned by this
+    /// function. When the other party "decapsulates", they will get the same shared secret, which
+    /// can be used as a symmetric key.
+    ///
+    /// # Panics
+    ///
+    /// This uses [`OsRng`] to generate randomness, and will panic if getting random values fails.
     pub fn encapsulate(&self) -> Result<(Encapsulation<C>, SharedSecret<C>), C::Error> {
         let (encapsulation, shared_secret) = C::encapsulate(&self.key)?;
 

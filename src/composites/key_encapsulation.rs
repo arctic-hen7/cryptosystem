@@ -24,11 +24,20 @@ impl<E1: KeyEncapsulationCryptosystem, E2: KeyEncapsulationCryptosystem>
         <E2 as KeyEncapsulationCryptosystem>::IoError,
     >;
 
-    fn encapsulate(
+    fn encapsulate_with_rng<R: rand::TryRngCore + rand::TryCryptoRng>(
         public_key: &Self::PublicKey,
-    ) -> Result<(Self::Encapsulation, Self::SharedSecret), Self::Error> {
-        let (encap_1, secret_1) = E1::encapsulate(&public_key.0).map_err(CompositeError::A)?;
-        let (encap_2, secret_2) = E2::encapsulate(&public_key.1).map_err(CompositeError::B)?;
+        rng: &mut R,
+    ) -> Result<Result<(Self::Encapsulation, Self::SharedSecret), Self::Error>, R::Error> {
+        let (encap_1, secret_1) = match E1::encapsulate_with_rng(&public_key.0, rng) {
+            Ok(Ok(x)) => x,
+            Ok(Err(err)) => return Ok(Err(CompositeError::A(err))),
+            Err(rand_err) => return Err(rand_err),
+        };
+        let (encap_2, secret_2) = match E2::encapsulate_with_rng(&public_key.1, rng) {
+            Ok(Ok(x)) => x,
+            Ok(Err(err)) => return Ok(Err(CompositeError::B(err))),
+            Err(rand_err) => return Err(rand_err),
+        };
 
         let secret = blake3::derive_key(
             KDF_CONTEXT,
@@ -39,7 +48,7 @@ impl<E1: KeyEncapsulationCryptosystem, E2: KeyEncapsulationCryptosystem>
             .concat(),
         );
 
-        Ok(((encap_1, encap_2), secret))
+        Ok(Ok(((encap_1, encap_2), secret)))
     }
 
     fn decapsulate(
